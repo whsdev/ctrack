@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MacroFlow PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root { --primary: #2ecc71; --bg: #f8f9fa; --card: #ffffff; --text: #2c3e50; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 70px; }
+        
+        /* Navigation */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ddd; z-index: 1000; }
+        .nav-item { border: none; background: none; font-size: 12px; cursor: pointer; color: #7f8c8d; }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
+
+        /* Screens */
+        .screen { display: none; padding: 20px; animation: fadeIn 0.3s; }
+        .screen.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Progress Circle */
+        .progress-container { position: relative; width: 200px; height: 200px; margin: 20px auto; }
+        .progress-svg { transform: rotate(-90deg); }
+        .progress-bg { fill: none; stroke: #eee; stroke-width: 10; }
+        .progress-bar { fill: none; stroke: var(--primary); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease; }
+        .progress-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+
+        /* Cards & Lists */
+        .card { background: var(--card); border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .meal-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f1f1; }
+        .add-btn { background: var(--primary); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        
+        h2 { margin-top: 0; }
+    </style>
+</head>
+<body>
+
+    <div id="screen-home" class="screen active">
+        <h2>Today</h2>
+        <div class="progress-container">
+            <svg class="progress-svg" width="200" height="200">
+                <circle class="progress-bg" cx="100" cy="100" r="90"></circle>
+                <circle id="circle-bar" class="progress-bar" cx="100" cy="100" r="90"></circle>
+            </svg>
+            <div class="progress-text">
+                <span id="display-remaining" style="font-size: 24px; font-weight: bold;">0</span><br>
+                <small>kcal left</small>
+            </div>
+        </div>
+        <div class="card">
+            <div id="macro-summary" style="display: flex; justify-content: space-around; text-align: center;">
+                <div><b id="sum-p">0</b><br><small>Prot</small></div>
+                <div><b id="sum-c">0</b><br><small>Carb</small></div>
+                <div><b id="sum-f">0</b><br><small>Fat</small></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-add" class="screen">
+        <h2>Add Food</h2>
+        <div id="reader" style="width: 100%; border-radius: 15px; overflow: hidden; margin-bottom: 15px;"></div>
+        <div class="card">
+            <h3>Custom Meals</h3>
+            <div id="custom-meals-container"></div>
+        </div>
+    </div>
+
+    <div id="screen-profile" class="screen">
+        <h2>My Profile</h2>
+        <div class="card">
+            <label>Weight (lbs)</label>
+            <input type="number" id="pref-weight" value="180">
+            <label>Height (inches)</label>
+            <input type="number" id="pref-height" value="70">
+            <label>Age</label>
+            <input type="number" id="pref-age" value="30">
+            <label>Gender</label>
+            <select id="pref-gender">
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+            <button onclick="saveProfile()" style="width:100%; background:var(--primary); color:white; padding:12px; border:none; border-radius:8px;">Save & Recalculate</button>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="showScreen('home')">Home</button>
+        <button class="nav-item" onclick="showScreen('add')">Add Food</button>
+        <button class="nav-item" onclick="showScreen('profile')">Profile</button>
+    </nav>
+
+    <script>
+        // --- DATA ---
+        let profile = JSON.parse(localStorage.getItem('macroProfile')) || { weight: 180, height: 70, age: 30, gender: 'male' };
+        let dailyLog = JSON.parse(localStorage.getItem('dailyLog')) || [];
+        const customMeals = [
+            { "name": "Chicken Katsu", "calories": 1000, "protein": 58, "carbs": 128, "fat": 24 },
+            { "name": "Mabu Tofu", "calories": 940, "protein": 57, "carbs": 102, "fat": 40 },
+            { "name": "Italian Sausage", "calories": 1200, "protein": 66, "carbs": 100, "fat": 70 },
+            { "name": "Borsh", "calories": 350, "protein": 22, "carbs": 38, "fat": 12 }
+            // Add remaining items here...
+        ];
+
+        // --- CORE MATH (IMPERIAL) ---
+        function getTargets() {
+            // Convert to Metric for Mifflin-St Jeor
+            const kg = profile.weight * 0.453592;
+            const cm = profile.height * 2.54;
+            let bmr = (10 * kg) + (6.25 * cm) - (5 * profile.age);
+            bmr += (profile.gender === 'male') ? 5 : -161;
+            
+            const tdee = Math.round(bmr * 1.375); // Using Lightly Active multiplier
+            return {
+                kcal: tdee,
+                p: Math.round((tdee * 0.3) / 4),
+                c: Math.round((tdee * 0.4) / 4),
+                f: Math.round((tdee * 0.3) / 9)
+            };
+        }
+
+        // --- UI LOGIC ---
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('screen-' + id).classList.add('active');
+            if (id === 'add') initScanner();
+            updateUI();
+        }
+
+        function updateUI() {
+            const targets = getTargets();
+            const totals = dailyLog.reduce((a, b) => ({
+                kcal: a.kcal + b.calories,
+                p: a.p + b.protein,
+                c: a.c + b.carbs,
+                f: a.f + b.fat
+            }), { kcal: 0, p: 0, c: 0, f: 0 });
+
+            // Update Progress Circle
+            const remaining = targets.kcal - totals.kcal;
+            document.getElementById('display-remaining').innerText = remaining;
+            
+            const circle = document.getElementById('circle-bar');
+            const circumference = 2 * Math.PI * 90;
+            circle.style.strokeDasharray = circumference;
+            const offset = circumference - (Math.min(totals.kcal / targets.kcal, 1) * circumference);
+            circle.style.strokeDashoffset = offset;
+
+            // Update Macros
+            document.getElementById('sum-p').innerText = `${totals.p}/${targets.p}g`;
+            document.getElementById('sum-c').innerText = `${totals.c}/${targets.c}g`;
+            document.getElementById('sum-f').innerText = `${totals.f}/${targets.f}g`;
+        }
+
+        function saveProfile() {
+            profile = {
+                weight: document.getElementById('pref-weight').value,
+                height: document.getElementById('pref-height').value,
+                age: document.getElementById('pref-age').value,
+                gender: document.getElementById('pref-gender').value
+            };
+            localStorage.setItem('macroProfile', JSON.stringify(profile));
+            showScreen('home');
+        }
+
+        function addFood(meal) {
+            dailyLog.push(meal);
+            localStorage.setItem('dailyLog', JSON.stringify(dailyLog));
+            alert(`Added ${meal.name}`);
+        }
+
+        // --- RENDER MEALS ---
+        const container = document.getElementById('custom-meals-container');
+        customMeals.forEach(meal => {
+            const div = document.createElement('div');
+            div.className = 'meal-row';
+            div.innerHTML = `<span>${meal.name} <br><small>${meal.calories} kcal</small></span>
+                             <button class="add-btn" onclick='addFood(${JSON.stringify(meal)})'>+</button>`;
+            container.appendChild(div);
+        });
+
+        // --- SCANNER ---
+        function initScanner() {
+            const html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
+                fetch(`https://world.openfoodfacts.org/api/v2/product/${text}.json`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if(d.status === 1) {
+                            const p = d.product;
+                            const meal = { name: p.product_name, calories: p.nutriments['energy-kcal_100g'], protein: p.nutriments.proteins_100g, carbs: p.nutriments.carbohydrates_100g, fat: p.nutriments.fat_100g };
+                            addFood(meal);
+                        }
+                    });
+            });
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
