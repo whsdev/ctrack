@@ -1,15 +1,17 @@
 {
-  "name": "cTrack 250",
-  "short_name": "CT50",
-  "start_url": "index.html",
+  "name": "C-Track Nutrition",
+  "short_name": "C-Track",
+  "description": "Premium Nutrition Tracking",
+  "start_url": ".",
   "display": "standalone",
-  "background_color": "#f8f9fa",
-  "theme_color": "#2ecc71",
+  "background_color": "#ffffff",
+  "theme_color": "#28cd41",
   "icons": [
     {
-      "src": "https://i.ibb.co/0V9pY4sJ/ctrack250.jpg",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "https://i.ibb.co/B5DqV2rW/ctrack250.jpg",
+      "sizes": "250x250",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
     }
   ]
 }
