@@ -3,289 +3,266 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>C-Track | Nutrition</title>
-    <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>C-Track</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://i.ibb.co/B5DqV2rW/ctrack250.jpg">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; color: #1e293b; overflow-x: hidden; }
-        .ios-glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
-        .safe-top { padding-top: env(safe-area-inset-top); }
-        .green-gradient { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); }
+        @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
+        
+        :root { --ios-green: #28cd41; }
+        body { font-family: 'SF Pro Display', -apple-system, sans-serif; background: #f2f2f7; user-select: none; -webkit-tap-highlight-color: transparent; }
+        
+        .ios-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border-radius: 20px; }
+        .ios-blur { background: rgba(255, 255, 255, 0.7); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
+        .safe-t { padding-top: env(safe-area-inset-top); }
+        .safe-b { padding-bottom: env(safe-area-inset-bottom); }
+        
         [x-cloak] { display: none !important; }
-        .splash-fade-out { animation: fadeOut 0.5s ease forwards 1.5s; }
-        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; pointer-events: none; } }
+        
+        .splash {
+            position: fixed; inset: 0; z-index: 999; background: white;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.5s ease;
+        }
     </style>
 </head>
-<body x-data="nutritionApp()" x-init="init()">
+<body x-data="app()" x-init="init()">
 
-    <div id="splash" class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center splash-fade-out">
-        <img src="https://i.ibb.co/B5DqV2rW/ctrack250.jpg" class="w-32 h-32 rounded-3xl shadow-2xl mb-4 animate-pulse" alt="Logo">
-        <h1 class="text-2xl font-bold tracking-tight text-emerald-600">C-TRACK</h1>
+    <div id="splash" class="splash">
+        <img src="https://i.ibb.co/B5DqV2rW/ctrack250.jpg" class="w-32 h-32 rounded-[30px] shadow-xl mb-6">
+        <div class="w-12 h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-full bg-green-500 animate-[loading_2s_ease-in-out_infinite]"></div>
+        </div>
+        <style>@keyframes loading { 0% { width: 0; } 100% { width: 100%; } }</style>
     </div>
 
-    <main class="min-h-screen pb-32">
-        <div x-show="tab === 'home'" x-cloak class="p-6 safe-top animate-in fade-in">
-            <header class="mb-8">
-                <p class="text-gray-400 text-sm font-medium uppercase tracking-widest">Today</p>
-                <h2 class="text-4xl font-extrabold text-slate-900" x-text="greeting()"></h2>
-            </header>
+    <div class="safe-t h-12"></div>
 
-            <div class="relative flex justify-center mb-10">
-                <div class="w-64 h-64 rounded-full border-[12px] border-emerald-50 flex flex-col items-center justify-center relative">
-                    <svg class="absolute -rotate-90 w-full h-full">
-                        <circle cx="128" cy="128" r="116" stroke-width="12" stroke="currentColor" fill="transparent" 
-                            class="text-emerald-500" :style="`stroke-dasharray: 728.8; stroke-dashoffset: ${728.8 * (1 - Math.min(caloriesConsumed / calorieGoal, 1))}`" />
+    <div class="px-5 pb-32">
+        
+        <div x-show="view === 'home'" x-cloak>
+            <h1 class="text-3xl font-bold tracking-tight mb-6">Summary</h1>
+            
+            <div class="ios-card p-8 text-center shadow-sm mb-6 border border-white">
+                <div class="relative inline-flex items-center justify-center">
+                    <svg class="w-48 h-48 transform -rotate-90">
+                        <circle cx="96" cy="96" r="88" stroke="#e5e7eb" stroke-width="12" fill="none" />
+                        <circle cx="96" cy="96" r="88" stroke="var(--ios-green)" stroke-width="12" fill="none"
+                            stroke-linecap="round" :style="`stroke-dasharray: 553; stroke-dashoffset: ${553 - (553 * Math.min(totals.cal / goals.cal, 1))}`" />
                     </svg>
-                    <span class="text-5xl font-black text-slate-800" x-text="Math.max(0, calorieGoal - caloriesConsumed)"></span>
-                    <span class="text-gray-400 font-semibold uppercase text-xs tracking-widest mt-1">Left</span>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-4 mb-8">
-                <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
-                    <p class="text-[10px] font-bold text-blue-500 uppercase tracking-tighter">Protein</p>
-                    <p class="text-lg font-bold" x-text="`${Math.round(macros.p)}/${proteinGoal}g`"></p>
-                    <div class="h-1 bg-slate-100 rounded-full mt-2 overflow-hidden">
-                        <div class="h-full bg-blue-500" :style="`width: ${Math.min((macros.p/proteinGoal)*100, 100)}%`"></div>
-                    </div>
-                </div>
-                <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
-                    <p class="text-[10px] font-bold text-amber-500 uppercase tracking-tighter">Carbs</p>
-                    <p class="text-lg font-bold" x-text="`${Math.round(macros.c)}/${carbsGoal}g`"></p>
-                    <div class="h-1 bg-slate-100 rounded-full mt-2 overflow-hidden">
-                        <div class="h-full bg-amber-500" :style="`width: ${Math.min((macros.c/carbsGoal)*100, 100)}%`"></div>
-                    </div>
-                </div>
-                <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
-                    <p class="text-[10px] font-bold text-rose-500 uppercase tracking-tighter">Fat</p>
-                    <p class="text-lg font-bold" x-text="`${Math.round(macros.f)}/${fatGoal}g`"></p>
-                    <div class="h-1 bg-slate-100 rounded-full mt-2 overflow-hidden">
-                        <div class="h-full bg-rose-500" :style="`width: ${Math.min((macros.f/fatGoal)*100, 100)}%`"></div>
+                    <div class="absolute flex flex-col">
+                        <span class="text-4xl font-bold" x-text="goals.cal - totals.cal"></span>
+                        <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Remaining</span>
                     </div>
                 </div>
             </div>
 
-            <h3 class="font-bold text-slate-800 mb-4">Timeline</h3>
+            <div class="grid grid-cols-3 gap-3 mb-8">
+                <template x-for="(val, macro) in {P: 'protein', C: 'carbs', F: 'fat'}">
+                    <div class="ios-card p-4 border border-white/50 text-center">
+                        <div class="text-[10px] font-bold uppercase mb-1" :class="macro === 'P' ? 'text-blue-500' : macro === 'C' ? 'text-orange-500' : 'text-pink-500'" x-text="macro"></div>
+                        <div class="font-bold text-lg" x-text="Math.round(totals[val]) + 'g'"></div>
+                    </div>
+                </template>
+            </div>
+
+            <h2 class="text-xl font-bold mb-4">Today's Meals</h2>
             <div class="space-y-3">
-                <template x-for="(item, index) in dailyLog" :key="index">
-                    <div class="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm">
+                <template x-for="(log, index) in dailyLog" :key="index">
+                    <div class="ios-card p-4 flex justify-between items-center animate-in slide-in-from-bottom-2">
                         <div>
-                            <p class="font-bold text-slate-900" x-text="item.name"></p>
-                            <p class="text-xs text-gray-400" x-text="`P: ${item.p}g • C: ${item.c}g • F: ${item.f}g`"></p>
+                            <p class="font-semibold text-gray-800" x-text="log.name"></p>
+                            <p class="text-xs text-gray-400" x-text="`${log.protein}P · ${log.carbs}C · ${log.fat}F`"></p>
                         </div>
-                        <p class="font-black text-emerald-600" x-text="`+${item.cal}`"></p>
+                        <div class="text-right">
+                            <p class="font-bold text-green-600" x-text="log.cal"></p>
+                        </div>
                     </div>
                 </template>
             </div>
         </div>
 
-        <div x-show="tab === 'add'" x-cloak class="p-6 safe-top">
-            <div class="flex items-center gap-4 mb-6">
-                <input type="text" x-model="search" placeholder="Search Moma's Kitchen..." 
-                    class="flex-1 bg-white p-4 rounded-2xl shadow-sm border-none focus:ring-2 focus:ring-emerald-400 outline-none">
-                <button @click="startScanner()" class="bg-emerald-100 p-4 rounded-2xl text-emerald-600">
+        <div x-show="view === 'add'" x-cloak>
+            <div class="flex items-center gap-3 mb-6">
+                <div class="flex-1 relative">
+                    <i data-lucide="search" class="absolute left-4 top-3.5 w-5 h-5 text-gray-400"></i>
+                    <input type="text" x-model="search" placeholder="Search Moma's Kitchen..." 
+                        class="w-full bg-white rounded-2xl py-3.5 pl-11 pr-4 outline-none shadow-sm focus:ring-2 ring-green-500">
+                </div>
+                <button @click="toggleScanner()" class="bg-white p-3.5 rounded-2xl shadow-sm text-green-600 active:bg-green-50">
                     <i data-lucide="scan-barcode"></i>
                 </button>
             </div>
 
-            <div id="reader" class="mb-4 overflow-hidden rounded-3xl" x-show="showScanner"></div>
+            <div id="qr-reader" class="rounded-3xl overflow-hidden mb-6" x-show="scanning"></div>
 
-            <div class="space-y-4">
-                <button @click="addFood('Default Protein Shake', 830, 34, 83, 49)" 
-                    class="w-full bg-emerald-600 text-white p-5 rounded-3xl shadow-lg flex justify-between items-center">
-                    <span class="font-bold">Default Protein Shake</span>
-                    <span class="opacity-80">830 kcal</span>
-                </button>
+            <div class="space-y-3">
+                <div @click="logFood('Default Protein Shake', 830, 34, 83, 49)" class="ios-card p-5 bg-green-500 text-white cursor-pointer active:scale-[0.98] transition">
+                    <p class="font-bold">Default Protein Shake</p>
+                    <p class="text-xs opacity-80">Almond Butter, Banana, Milk, Protein</p>
+                </div>
 
-                <template x-for="food in filteredFoods" :key="food.Meal">
-                    <button @click="addFood(food.Meal, food['Est. Calories'], food['Protein (g)'], food['Carbs (g)'], food['Fat (g)'])"
-                        class="w-full bg-white p-4 rounded-2xl border border-slate-100 flex justify-between items-center hover:bg-emerald-50 transition">
-                        <div class="text-left">
-                            <p class="font-bold text-slate-800" x-text="food.Meal"></p>
-                            <p class="text-xs text-gray-400" x-text="`${food['Est. Calories']} kcal`"></p>
+                <template x-for="food in filteredMoma" :key="food.Meal">
+                    <div @click="logFood(food.Meal, food['Est. Calories'], food['Protein (g)'], food['Carbs (g)'], food['Fat (g)'])" 
+                        class="ios-card p-4 flex justify-between items-center cursor-pointer active:bg-gray-50 transition">
+                        <div>
+                            <p class="font-semibold" x-text="food.Meal"></p>
+                            <p class="text-xs text-gray-400" x-text="food['Est. Calories'] + ' kcal'"></p>
                         </div>
-                        <i data-lucide="plus-circle" class="text-emerald-500"></i>
-                    </button>
+                        <i data-lucide="plus" class="text-green-500"></i>
+                    </div>
                 </template>
             </div>
         </div>
 
-        <div x-show="tab === 'settings'" x-cloak class="p-6 safe-top">
-            <h2 class="text-3xl font-bold mb-8 text-slate-900">Profile</h2>
+        <div x-show="view === 'settings'" x-cloak>
+            <h1 class="text-3xl font-bold mb-8">Settings</h1>
             
-            <div class="bg-white p-6 rounded-3xl shadow-sm space-y-4 mb-6">
-                <h3 class="font-bold text-emerald-600 flex items-center gap-2">
-                    <i data-lucide="zap" class="w-4 h-4"></i> Special Goals
-                </h3>
-                <button @click="setNtoGoal()" class="w-full green-gradient text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition">
-                    SET "NTO" GOAL
-                </button>
-                <p class="text-xs text-center text-gray-400">Sets targets to 160g P, 68g F, 375g C</p>
-            </div>
-
-            <div class="bg-white p-6 rounded-3xl shadow-sm space-y-4">
-                <h3 class="font-bold text-slate-800">Lifesum Calculator</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-1">
-                        <label class="text-xs font-bold text-gray-400 uppercase">Weight (kg)</label>
-                        <input type="number" x-model="profile.weight" class="w-full bg-slate-50 p-3 rounded-xl border-none">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-xs font-bold text-gray-400 uppercase">Height (cm)</label>
-                        <input type="number" x-model="profile.height" class="w-full bg-slate-50 p-3 rounded-xl border-none">
-                    </div>
+            <div class="ios-card overflow-hidden mb-6">
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+                    <span class="font-medium">Nto Preset (High Carb)</span>
+                    <button @click="applyNto()" class="text-sm font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">Apply</button>
                 </div>
-                <button @click="calculateFromProfile()" class="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl">
-                    Calculate Daily Target
-                </button>
             </div>
-        </div>
-    </main>
 
-    <nav class="fixed bottom-0 left-0 right-0 ios-glass border-t border-white/20 px-8 py-4 safe-bottom z-50">
-        <div class="flex justify-between items-center max-w-md mx-auto">
-            <button @click="tab = 'home'" :class="tab === 'home' ? 'text-emerald-600' : 'text-slate-400'" class="transition-colors">
-                <i data-lucide="layout-grid"></i>
-            </button>
-            <button @click="tab = 'add'" class="w-14 h-14 green-gradient rounded-full -mt-10 flex items-center justify-center text-white shadow-xl shadow-emerald-200 border-4 border-white transition-transform active:scale-90">
-                <i data-lucide="plus" class="w-8 h-8"></i>
-            </button>
-            <button @click="tab = 'settings'" :class="tab === 'settings' ? 'text-emerald-600' : 'text-slate-400'" class="transition-colors">
-                <i data-lucide="user"></i>
-            </button>
+            <div class="ios-card p-4 space-y-4">
+                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Targets</h3>
+                <template x-for="(val, goal) in goals">
+                    <div class="flex justify-between items-center">
+                        <span class="capitalize" x-text="goal === 'cal' ? 'Calories' : goal"></span>
+                        <input type="number" x-model="goals[goal]" @input="save()" class="w-20 text-right bg-transparent font-bold text-green-600">
+                    </div>
+                </template>
+            </div>
+            
+            <button @click="clearLog()" class="w-full mt-8 p-4 text-red-500 font-semibold">Clear Today's Data</button>
+        </div>
+    </div>
+
+    <nav class="fixed bottom-0 left-0 right-0 ios-blur safe-b border-t border-gray-200 z-50">
+        <div class="flex justify-around items-center h-16">
+            <button @click="view = 'home'" :class="view === 'home' ? 'text-green-600' : 'text-gray-400'"><i data-lucide="home"></i></button>
+            <button @click="view = 'add'" :class="view === 'add' ? 'text-green-600' : 'text-gray-400'"><i data-lucide="plus-circle"></i></button>
+            <button @click="view = 'settings'" :class="view === 'settings' ? 'text-green-600' : 'text-gray-400'"><i data-lucide="settings"></i></button>
         </div>
     </nav>
 
     <script>
-        function nutritionApp() {
+        function app() {
             return {
-                tab: 'home',
+                view: 'home',
                 search: '',
-                showScanner: false,
-                calorieGoal: 2500,
-                proteinGoal: 150,
-                carbsGoal: 300,
-                fatGoal: 80,
-                caloriesConsumed: 0,
-                macros: { p: 0, c: 0, f: 0 },
+                scanning: false,
+                goals: { cal: 2800, protein: 150, carbs: 300, fat: 80 },
+                totals: { cal: 0, protein: 0, carbs: 0, fat: 0 },
                 dailyLog: [],
-                profile: { weight: 80, height: 180, age: 25, activity: 1.5 },
-                momaKitchen: [
-                    {"Meal": "Chicken Katsu (3 pcs + 2.5c rice)", "Est. Calories": 1000.0, "Protein (g)": 58.0, "Carbs (g)": 128.0, "Fat (g)": 24.0}, 
-                    {"Meal": "Mabu Tofu (2.5c + 2c rice)", "Est. Calories": 940.0, "Protein (g)": 57.0, "Carbs (g)": 102.0, "Fat (g)": 40.0}, 
-                    {"Meal": "Котлетки (4 patties)", "Est. Calories": 840.0, "Protein (g)": 46.0, "Carbs (g)": 48.0, "Fat (g)": 52.0}, 
-                    {"Meal": "Spaghetti (1/8th of the pot)", "Est. Calories": 810.0, "Protein (g)": 44.0, "Carbs (g)": 92.0, "Fat (g)": 30.0}, 
-                    {"Meal": "Chicken Teriyaki (2.5 drummie + 2.25c rice)", "Est. Calories": 820.0, "Protein (g)": 42.0, "Carbs (g)": 115.0, "Fat (g)": 22.0}, 
-                    {"Meal": "White Soup (1.25 bowls)", "Est. Calories": 680.0, "Protein (g)": 32.0, "Carbs (g)": 42.0, "Fat (g)": 46.0}, 
-                    {"Meal": "Рассольник (1 bowl)", "Est. Calories": 380.0, "Protein (g)": 18.0, "Carbs (g)": 45.0, "Fat (g)": 14.0}, 
-                    {"Meal": "Tomato Soup (+ Grilled Cheese)", "Est. Calories": 720.0, "Protein (g)": 22.0, "Carbs (g)": 68.0, "Fat (g)": 42.0}, 
-                    {"Meal": "Chicken Drumsticks (2.5 drummie + 2.25c rice)", "Est. Calories": 790.0, "Protein (g)": 40.0, "Carbs (g)": 105.0, "Fat (g)": 24.0}, 
-                    {"Meal": "Italian Sausage (4 links + 2c rice)", "Est. Calories": 1200.0, "Protein (g)": 66.0, "Carbs (g)": 100.0, "Fat (g)": 70.0}, 
-                    {"Meal": "Steak (4.5 slices + 2.25c rice)", "Est. Calories": 1040.0, "Protein (g)": 68.0, "Carbs (g)": 102.0, "Fat (g)": 40.0}, 
-                    {"Meal": "Korean Curry (3c curry + 2c rice)", "Est. Calories": 920.0, "Protein (g)": 42.0, "Carbs (g)": 135.0, "Fat (g)": 26.0}, 
-                    {"Meal": "Beef Round Bottom (4.5 slices + 1.5c rice)", "Est. Calories": 660.0, "Protein (g)": 48.0, "Carbs (g)": 70.0, "Fat (g)": 20.0}, 
-                    {"Meal": "Борщ (Borsh) (1 bowl)", "Est. Calories": 350.0, "Protein (g)": 22.0, "Carbs (g)": 38.0, "Fat (g)": 12.0}, 
-                    {"Meal": "Щи (Shchi) (0.9 bowl)", "Est. Calories": 310.0, "Protein (g)": 20.0, "Carbs (g)": 32.0, "Fat (g)": 10.0}, 
-                    {"Meal": "Peanut Butter and Jelly", "Est. Calories": 380.0, "Protein (g)": 13.0, "Carbs (g)": 51.0, "Fat (g)": 16.0}
+                moma: [
+                    {"Meal": "Chicken Katsu (3 pcs + 2.5c rice)", "Est. Calories": 1000, "Protein (g)": 58, "Carbs (g)": 128, "Fat (g)": 24},
+                    {"Meal": "Mabu Tofu (2.5c + 2c rice)", "Est. Calories": 940, "Protein (g)": 57, "Carbs (g)": 102, "Fat (g)": 40},
+                    {"Meal": "Котлетки (4 patties)", "Est. Calories": 840, "Protein (g)": 46, "Carbs (g)": 48, "Fat (g)": 52},
+                    {"Meal": "Spaghetti (1/8th of the pot)", "Est. Calories": 810, "Protein (g)": 44, "Carbs (g)": 92, "Fat (g)": 30},
+                    {"Meal": "Chicken Teriyaki (2.5 drummie + 2.25c rice)", "Est. Calories": 820, "Protein (g)": 42, "Carbs (g)": 115, "Fat (g)": 22},
+                    {"Meal": "White Soup (1.25 bowls)", "Est. Calories": 680, "Protein (g)": 32, "Carbs (g)": 42, "Fat (g)": 46},
+                    {"Meal": "Tomato Soup (+ Grilled Cheese)", "Est. Calories": 720, "Protein (g)": 22, "Carbs (g)": 68, "Fat (g)": 42},
+                    {"Meal": "Korean Curry (3c curry + 2c rice)", "Est. Calories": 920, "Protein (g)": 42, "Carbs (g)": 135, "Fat (g)": 26},
+                    {"Meal": "Peanut Butter and Jelly", "Est. Calories": 380, "Protein (g)": 13, "Carbs (g)": 51, "Fat (g)": 16}
                 ],
 
                 init() {
-                    const saved = localStorage.getItem('nutritionData');
-                    if (saved) {
-                        const data = JSON.parse(saved);
-                        this.dailyLog = data.dailyLog || [];
-                        this.updateTotals();
-                        this.calorieGoal = data.calorieGoal || 2500;
-                        this.proteinGoal = data.proteinGoal || 150;
-                        this.carbsGoal = data.carbsGoal || 300;
-                        this.fatGoal = data.fatGoal || 80;
-                    }
+                    const saved = JSON.parse(localStorage.getItem('ctrack_data') || '{}');
+                    if (saved.dailyLog) this.dailyLog = saved.dailyLog;
+                    if (saved.goals) this.goals = saved.goals;
+                    this.calculateTotals();
+                    
+                    // Hide Splash
+                    setTimeout(() => document.getElementById('splash').style.opacity = '0', 2000);
+                    setTimeout(() => document.getElementById('splash').style.display = 'none', 2500);
+                    
                     lucide.createIcons();
                 },
 
-                greeting() {
-                    const hr = new Date().getHours();
-                    if (hr < 12) return "Good Morning";
-                    if (hr < 18) return "Good Afternoon";
-                    return "Good Evening";
+                get filteredMoma() {
+                    return this.moma.filter(f => f.Meal.toLowerCase().includes(this.search.toLowerCase()));
                 },
 
-                get filteredFoods() {
-                    if (!this.search) return this.momaKitchen;
-                    return this.momaKitchen.filter(f => f.Meal.toLowerCase().includes(this.search.toLowerCase()));
-                },
-
-                addFood(name, cal, p, c, f) {
-                    this.dailyLog.unshift({ name, cal, p, c, f, time: new Date().toLocaleTimeString() });
-                    this.updateTotals();
+                logFood(name, cal, p, c, f) {
+                    this.dailyLog.unshift({ name, cal, protein: p, carbs: c, fat: f, ts: Date.now() });
+                    this.calculateTotals();
                     this.save();
-                    this.tab = 'home';
+                    this.view = 'home';
                     this.search = '';
                 },
 
-                updateTotals() {
-                    this.caloriesConsumed = this.dailyLog.reduce((acc, curr) => acc + curr.cal, 0);
-                    this.macros = this.dailyLog.reduce((acc, curr) => ({
-                        p: acc.p + curr.p,
-                        c: acc.c + curr.c,
-                        f: acc.f + curr.f
-                    }), { p: 0, c: 0, f: 0 });
+                calculateTotals() {
+                    this.totals = this.dailyLog.reduce((acc, curr) => {
+                        acc.cal += curr.cal;
+                        acc.protein += curr.protein;
+                        acc.carbs += curr.carbs;
+                        acc.fat += curr.fat;
+                        return acc;
+                    }, { cal: 0, protein: 0, carbs: 0, fat: 0 });
                 },
 
-                setNtoGoal() {
-                    this.proteinGoal = 160;
-                    this.fatGoal = 68;
-                    this.carbsGoal = 375;
-                    this.calorieGoal = (160 * 4) + (68 * 9) + (375 * 4);
+                applyNto() {
+                    this.goals = { cal: 2752, protein: 160, fat: 68, carbs: 375 };
                     this.save();
-                    alert('Nto Goals applied!');
+                    alert("Nto Goals Set!");
                 },
 
-                calculateFromProfile() {
-                    // Mifflin-St Jeor
-                    const bmr = (10 * this.profile.weight) + (6.25 * this.profile.height) - (5 * 25) + 5;
-                    this.calorieGoal = Math.round(bmr * 1.5);
-                    this.proteinGoal = Math.round(this.profile.weight * 2);
-                    this.fatGoal = Math.round((this.calorieGoal * 0.25) / 9);
-                    this.carbsGoal = Math.round((this.calorieGoal - (this.proteinGoal * 4) - (this.fatGoal * 9)) / 4);
-                    this.save();
+                toggleScanner() {
+                    if (this.scanning) {
+                        this.scanner.stop();
+                        this.scanning = false;
+                    } else {
+                        this.scanning = true;
+                        this.scanner = new Html5Qrcode("qr-reader");
+                        this.scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+                            (code) => this.fetchBarcode(code));
+                    }
                 },
 
-                startScanner() {
-                    this.showScanner = true;
-                    const html5QrCode = new Html5Qrcode("reader");
-                    html5QrCode.start(
-                        { facingMode: "environment" }, 
-                        { fps: 10, qrbox: { width: 250, height: 250 } },
-                        (decodedText) => {
-                            // In real app, call OpenFoodFacts API here
-                            alert("Scanned Barcode: " + decodedText + ". (API integration required for live lookup)");
-                            html5QrCode.stop();
-                            this.showScanner = false;
+                async fetchBarcode(code) {
+                    this.scanner.stop();
+                    this.scanning = false;
+                    try {
+                        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`);
+                        const data = await res.json();
+                        if (data.status === 1) {
+                            const p = data.product;
+                            const nut = p.nutriments;
+                            this.logFood(p.product_name, Math.round(nut['energy-kcal_100g']), Math.round(nut.proteins_100g), Math.round(nut.carbohydrates_100g), Math.round(nut.fat_100g));
+                        } else {
+                            alert("Food not found in database.");
                         }
-                    ).catch(err => {
-                        console.error(err);
-                        alert("Camera access denied or error.");
-                    });
+                    } catch (e) { alert("Network error."); }
                 },
 
                 save() {
-                    localStorage.setItem('nutritionData', JSON.stringify({
-                        dailyLog: this.dailyLog,
-                        calorieGoal: this.calorieGoal,
-                        proteinGoal: this.proteinGoal,
-                        carbsGoal: this.carbsGoal,
-                        fatGoal: this.fatGoal
-                    }));
+                    localStorage.setItem('ctrack_data', JSON.stringify({ dailyLog: this.dailyLog, goals: this.goals }));
+                },
+
+                clearLog() {
+                    if (confirm("Clear all entries?")) {
+                        this.dailyLog = [];
+                        this.calculateTotals();
+                        this.save();
+                    }
                 }
             }
+        }
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
         }
     </script>
 </body>
