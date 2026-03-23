@@ -5,11 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C-Track</title>
+    <title>C-Track | Pro</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="https://i.ibb.co/B5DqV2rW/ctrack250.jpg">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -17,176 +16,187 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
-        
         :root { --ios-green: #28cd41; }
-        body { font-family: 'SF Pro Display', -apple-system, sans-serif; background: #f2f2f7; user-select: none; -webkit-tap-highlight-color: transparent; }
-        
-        .ios-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border-radius: 20px; }
-        .ios-blur { background: rgba(255, 255, 255, 0.7); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
+        body { font-family: 'SF Pro Display', -apple-system, sans-serif; background: #f2f2f7; overflow-x: hidden; }
+        .ios-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.5); }
+        .ios-blur { background: rgba(255, 255, 255, 0.75); backdrop-filter: saturate(180%) blur(25px); -webkit-backdrop-filter: saturate(180%) blur(25px); }
         .safe-t { padding-top: env(safe-area-inset-top); }
         .safe-b { padding-bottom: env(safe-area-inset-bottom); }
-        
         [x-cloak] { display: none !important; }
-        
-        .splash {
-            position: fixed; inset: 0; z-index: 999; background: white;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 0.5s ease;
-        }
     </style>
 </head>
-<body x-data="app()" x-init="init()">
+<body x-data="nutritionPro()" x-init="init()">
 
-    <div id="splash" class="splash">
-        <img src="https://i.ibb.co/B5DqV2rW/ctrack250.jpg" class="w-32 h-32 rounded-[30px] shadow-xl mb-6">
-        <div class="w-12 h-1 bg-gray-100 rounded-full overflow-hidden">
-            <div class="h-full bg-green-500 animate-[loading_2s_ease-in-out_infinite]"></div>
-        </div>
-        <style>@keyframes loading { 0% { width: 0; } 100% { width: 100%; } }</style>
+    <div id="splash" class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center transition-opacity duration-500" :class="loading ? 'opacity-100' : 'opacity-0 pointer-events-none'">
+        <img src="https://i.ibb.co/B5DqV2rW/ctrack250.jpg" class="w-28 h-28 rounded-3xl shadow-2xl mb-6">
+        <p class="text-green-600 font-bold tracking-widest uppercase text-xs">C-Track Pro</p>
     </div>
 
-    <div class="safe-t h-12"></div>
+    <main class="min-h-screen">
+        <div class="safe-t h-12"></div>
 
-    <div class="px-5 pb-32">
-        
-        <div x-show="view === 'home'" x-cloak>
-            <h1 class="text-3xl font-bold tracking-tight mb-6">Summary</h1>
-            
-            <div class="ios-card p-8 text-center shadow-sm mb-6 border border-white">
-                <div class="relative inline-flex items-center justify-center">
-                    <svg class="w-48 h-48 transform -rotate-90">
-                        <circle cx="96" cy="96" r="88" stroke="#e5e7eb" stroke-width="12" fill="none" />
-                        <circle cx="96" cy="96" r="88" stroke="var(--ios-green)" stroke-width="12" fill="none"
-                            stroke-linecap="round" :style="`stroke-dasharray: 553; stroke-dashoffset: ${553 - (553 * Math.min(totals.cal / goals.cal, 1))}`" />
-                    </svg>
-                    <div class="absolute flex flex-col">
-                        <span class="text-4xl font-bold" x-text="goals.cal - totals.cal"></span>
-                        <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Remaining</span>
-                    </div>
+        <div x-show="view === 'home'" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" class="px-5 pb-32">
+            <header class="mb-8 mt-4">
+                <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Today</h1>
+            </header>
+
+            <div class="ios-card p-10 text-center shadow-lg mb-8 relative overflow-hidden">
+                <div class="relative z-10">
+                    <p class="text-5xl font-black text-slate-800" x-text="Math.max(0, goals.cal - totals.cal)"></p>
+                    <p class="text-gray-400 font-bold uppercase text-[10px] tracking-widest mt-1">Calories Left</p>
+                </div>
+                <div class="absolute inset-0 flex items-center justify-center opacity-10">
+                    <i data-lucide="activity" class="w-40 h-40 text-green-500"></i>
                 </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-3 mb-8">
-                <template x-for="(val, macro) in {P: 'protein', C: 'carbs', F: 'fat'}">
-                    <div class="ios-card p-4 border border-white/50 text-center">
-                        <div class="text-[10px] font-bold uppercase mb-1" :class="macro === 'P' ? 'text-blue-500' : macro === 'C' ? 'text-orange-500' : 'text-pink-500'" x-text="macro"></div>
-                        <div class="font-bold text-lg" x-text="Math.round(totals[val]) + 'g'"></div>
-                    </div>
-                </template>
+            <div class="grid grid-cols-3 gap-4 mb-10">
+                <div class="ios-card p-4 text-center">
+                    <p class="text-[10px] font-bold text-blue-500 uppercase">Protein</p>
+                    <p class="text-lg font-bold" x-text="Math.round(totals.p) + 'g'"></p>
+                </div>
+                <div class="ios-card p-4 text-center">
+                    <p class="text-[10px] font-bold text-orange-500 uppercase">Carbs</p>
+                    <p class="text-lg font-bold" x-text="Math.round(totals.c) + 'g'"></p>
+                </div>
+                <div class="ios-card p-4 text-center">
+                    <p class="text-[10px] font-bold text-rose-500 uppercase">Fat</p>
+                    <p class="text-lg font-bold" x-text="Math.round(totals.f) + 'g'"></p>
+                </div>
             </div>
 
-            <h2 class="text-xl font-bold mb-4">Today's Meals</h2>
             <div class="space-y-3">
-                <template x-for="(log, index) in dailyLog" :key="index">
-                    <div class="ios-card p-4 flex justify-between items-center animate-in slide-in-from-bottom-2">
-                        <div>
-                            <p class="font-semibold text-gray-800" x-text="log.name"></p>
-                            <p class="text-xs text-gray-400" x-text="`${log.protein}P · ${log.carbs}C · ${log.fat}F`"></p>
+                <template x-for="(log, index) in dailyLog" :key="log.id">
+                    <div class="ios-card p-4 flex justify-between items-center group">
+                        <div class="flex-1">
+                            <p class="font-bold text-slate-800" x-text="log.name"></p>
+                            <p class="text-xs text-gray-400" x-text="log.qty + ' units • ' + log.cal + ' kcal'"></p>
                         </div>
-                        <div class="text-right">
-                            <p class="font-bold text-green-600" x-text="log.cal"></p>
-                        </div>
+                        <button @click="deleteItem(index)" class="p-2 text-red-400 active:text-red-600 transition">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
                     </div>
                 </template>
             </div>
         </div>
 
-        <div x-show="view === 'add'" x-cloak>
-            <div class="flex items-center gap-3 mb-6">
+        <div x-show="view === 'add'" x-transition class="px-5 pb-32">
+            <div class="sticky top-0 bg-gray-50 pt-4 pb-4 z-20 flex gap-2">
                 <div class="flex-1 relative">
-                    <i data-lucide="search" class="absolute left-4 top-3.5 w-5 h-5 text-gray-400"></i>
-                    <input type="text" x-model="search" placeholder="Search Moma's Kitchen..." 
-                        class="w-full bg-white rounded-2xl py-3.5 pl-11 pr-4 outline-none shadow-sm focus:ring-2 ring-green-500">
+                    <i data-lucide="search" class="absolute left-4 top-3.5 w-4 h-4 text-gray-400"></i>
+                    <input type="text" x-model="search" placeholder="Search Moma's..." 
+                        class="w-full bg-white rounded-2xl py-3.5 pl-11 pr-4 outline-none shadow-sm">
                 </div>
-                <button @click="toggleScanner()" class="bg-white p-3.5 rounded-2xl shadow-sm text-green-600 active:bg-green-50">
+                <button @click="startScanning()" class="bg-white p-3.5 rounded-2xl shadow-sm text-green-600">
                     <i data-lucide="scan-barcode"></i>
                 </button>
             </div>
 
-            <div id="qr-reader" class="rounded-3xl overflow-hidden mb-6" x-show="scanning"></div>
+            <div id="reader" class="rounded-3xl overflow-hidden mb-6 bg-black" x-show="scanning"></div>
 
             <div class="space-y-3">
-                <div @click="logFood('Default Protein Shake', 830, 34, 83, 49)" class="ios-card p-5 bg-green-500 text-white cursor-pointer active:scale-[0.98] transition">
+                <div @click="openQuantity('Default Protein Shake', 830, 34, 83, 49)" class="ios-card p-5 bg-green-500 text-white cursor-pointer active:scale-95 transition">
                     <p class="font-bold">Default Protein Shake</p>
                     <p class="text-xs opacity-80">Almond Butter, Banana, Milk, Protein</p>
                 </div>
 
                 <template x-for="food in filteredMoma" :key="food.Meal">
-                    <div @click="logFood(food.Meal, food['Est. Calories'], food['Protein (g)'], food['Carbs (g)'], food['Fat (g)'])" 
-                        class="ios-card p-4 flex justify-between items-center cursor-pointer active:bg-gray-50 transition">
+                    <div @click="openQuantity(food.Meal, food['Est. Calories'], food['Protein (g)'], food['Carbs (g)'], food['Fat (g)'])" 
+                        class="ios-card p-4 flex justify-between items-center active:bg-green-50 transition cursor-pointer">
                         <div>
-                            <p class="font-semibold" x-text="food.Meal"></p>
+                            <p class="font-bold text-sm text-slate-700" x-text="food.Meal"></p>
                             <p class="text-xs text-gray-400" x-text="food['Est. Calories'] + ' kcal'"></p>
                         </div>
-                        <i data-lucide="plus" class="text-green-500"></i>
+                        <i data-lucide="plus" class="text-green-500 w-4 h-4"></i>
                     </div>
                 </template>
             </div>
         </div>
 
-        <div x-show="view === 'settings'" x-cloak>
-            <h1 class="text-3xl font-bold mb-8">Settings</h1>
+        <div x-show="view === 'settings'" x-transition class="px-5 pb-32">
+            <h1 class="text-3xl font-bold mb-6 pt-4">Profile</h1>
+            <div class="ios-card p-6 space-y-6">
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Quick Goal</p>
+                    <button @click="setNto()" class="w-full bg-green-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition">
+                        SET "NTO" CALORIE GOAL
+                    </button>
+                    <p class="text-[10px] text-center text-gray-400 mt-2">160g Protein | 68g Fat | 375g Carbs</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div x-show="showModal" class="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm" x-cloak>
+        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl transition-all" @click.away="showModal = false"
+             x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0">
+            <h2 class="text-xl font-bold mb-2 text-center" x-text="activeFood.name"></h2>
+            <p class="text-center text-gray-400 text-sm mb-6">Enter quantity consumed</p>
             
-            <div class="ios-card overflow-hidden mb-6">
-                <div class="p-4 border-b border-gray-100 flex justify-between items-center">
-                    <span class="font-medium">Nto Preset (High Carb)</span>
-                    <button @click="applyNto()" class="text-sm font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">Apply</button>
+            <div class="flex items-center justify-center gap-6 mb-8">
+                <button @click="modalQty = Math.max(0.25, modalQty - 0.25)" class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-2xl font-bold">-</button>
+                <div class="text-center">
+                    <input type="number" step="0.25" x-model="modalQty" class="w-20 text-center text-3xl font-bold outline-none">
+                    <p class="text-xs font-bold text-green-500 mt-1">SERVINGS</p>
+                </div>
+                <button @click="modalQty += 0.25" class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-2xl font-bold">+</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div class="bg-gray-50 p-3 rounded-2xl text-center">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">Resulting Cal</p>
+                    <p class="font-bold text-lg" x-text="Math.round(activeFood.cal * modalQty)"></p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-2xl text-center">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">Protein</p>
+                    <p class="font-bold text-lg text-blue-500" x-text="Math.round(activeFood.p * modalQty) + 'g'"></p>
                 </div>
             </div>
 
-            <div class="ios-card p-4 space-y-4">
-                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Targets</h3>
-                <template x-for="(val, goal) in goals">
-                    <div class="flex justify-between items-center">
-                        <span class="capitalize" x-text="goal === 'cal' ? 'Calories' : goal"></span>
-                        <input type="number" x-model="goals[goal]" @input="save()" class="w-20 text-right bg-transparent font-bold text-green-600">
-                    </div>
-                </template>
-            </div>
-            
-            <button @click="clearLog()" class="w-full mt-8 p-4 text-red-500 font-semibold">Clear Today's Data</button>
+            <button @click="confirmAdd()" class="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-xl active:scale-95 transition">
+                Add to Daily Intake
+            </button>
         </div>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 ios-blur safe-b border-t border-gray-200 z-50">
-        <div class="flex justify-around items-center h-16">
-            <button @click="view = 'home'" :class="view === 'home' ? 'text-green-600' : 'text-gray-400'"><i data-lucide="home"></i></button>
-            <button @click="view = 'add'" :class="view === 'add' ? 'text-green-600' : 'text-gray-400'"><i data-lucide="plus-circle"></i></button>
-            <button @click="view = 'settings'" :class="view === 'settings' ? 'text-green-600' : 'text-gray-400'"><i data-lucide="settings"></i></button>
+    <nav class="fixed bottom-0 left-0 right-0 ios-blur safe-b border-t border-gray-200/50 z-50">
+        <div class="flex justify-around items-center h-20 max-w-md mx-auto">
+            <button @click="view = 'home'" :class="view === 'home' ? 'text-green-600' : 'text-gray-400'" class="flex flex-col items-center">
+                <i data-lucide="home" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold mt-1">Today</span>
+            </button>
+            <button @click="view = 'add'" :class="view === 'add' ? 'text-green-600' : 'text-gray-400'" class="flex flex-col items-center">
+                <i data-lucide="search" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold mt-1">Log</span>
+            </button>
+            <button @click="view = 'settings'" :class="view === 'settings' ? 'text-green-600' : 'text-gray-400'" class="flex flex-col items-center">
+                <i data-lucide="user" class="w-6 h-6"></i>
+                <span class="text-[10px] font-bold mt-1">Profile</span>
+            </button>
         </div>
     </nav>
 
     <script>
-        function app() {
+        function nutritionPro() {
             return {
                 view: 'home',
+                loading: true,
                 search: '',
                 scanning: false,
-                goals: { cal: 2800, protein: 150, carbs: 300, fat: 80 },
-                totals: { cal: 0, protein: 0, carbs: 0, fat: 0 },
+                showModal: false,
+                modalQty: 1,
+                activeFood: {},
+                goals: { cal: 2500, p: 150, c: 300, f: 80 },
+                totals: { cal: 0, p: 0, c: 0, f: 0 },
                 dailyLog: [],
-                moma: [
-                    {"Meal": "Chicken Katsu (3 pcs + 2.5c rice)", "Est. Calories": 1000, "Protein (g)": 58, "Carbs (g)": 128, "Fat (g)": 24},
-                    {"Meal": "Mabu Tofu (2.5c + 2c rice)", "Est. Calories": 940, "Protein (g)": 57, "Carbs (g)": 102, "Fat (g)": 40},
-                    {"Meal": "Котлетки (4 patties)", "Est. Calories": 840, "Protein (g)": 46, "Carbs (g)": 48, "Fat (g)": 52},
-                    {"Meal": "Spaghetti (1/8th of the pot)", "Est. Calories": 810, "Protein (g)": 44, "Carbs (g)": 92, "Fat (g)": 30},
-                    {"Meal": "Chicken Teriyaki (2.5 drummie + 2.25c rice)", "Est. Calories": 820, "Protein (g)": 42, "Carbs (g)": 115, "Fat (g)": 22},
-                    {"Meal": "White Soup (1.25 bowls)", "Est. Calories": 680, "Protein (g)": 32, "Carbs (g)": 42, "Fat (g)": 46},
-                    {"Meal": "Tomato Soup (+ Grilled Cheese)", "Est. Calories": 720, "Protein (g)": 22, "Carbs (g)": 68, "Fat (g)": 42},
-                    {"Meal": "Korean Curry (3c curry + 2c rice)", "Est. Calories": 920, "Protein (g)": 42, "Carbs (g)": 135, "Fat (g)": 26},
-                    {"Meal": "Peanut Butter and Jelly", "Est. Calories": 380, "Protein (g)": 13, "Carbs (g)": 51, "Fat (g)": 16}
-                ],
+                moma: [{"Meal": "Chicken Katsu (3 pcs + 2.5c rice)", "Est. Calories": 1000.0, "Protein (g)": 58.0, "Carbs (g)": 128.0, "Fat (g)": 24.0}, {"Meal": "Mabu Tofu (2.5c + 2c rice)", "Est. Calories": 940.0, "Protein (g)": 57.0, "Carbs (g)": 102.0, "Fat (g)": 40.0}, {"Meal": "Котлетки (4 patties)", "Est. Calories": 840.0, "Protein (g)": 46.0, "Carbs (g)": 48.0, "Fat (g)": 52.0}, {"Meal": "Spaghetti (1/8th of the pot)", "Est. Calories": 810.0, "Protein (g)": 44.0, "Carbs (g)": 92.0, "Fat (g)": 30.0}, {"Meal": "Chicken Teriyaki (2.5 drummie + 2.25c rice)", "Est. Calories": 820.0, "Protein (g)": 42.0, "Carbs (g)": 115.0, "Fat (g)": 22.0}, {"Meal": "White Soup (1.25 bowls)", "Est. Calories": 680.0, "Protein (g)": 32.0, "Carbs (g)": 42.0, "Fat (g)": 46.0}, {"Meal": "Рассольник (1 bowl)", "Est. Calories": 380.0, "Protein (g)": 18.0, "Carbs (g)": 45.0, "Fat (g)": 14.0}, {"Meal": "Tomato Soup (+ Grilled Cheese)", "Est. Calories": 720.0, "Protein (g)": 22.0, "Carbs (g)": 68.0, "Fat (g)": 42.0}, {"Meal": "Chicken Drumsticks (2.5 drummie + 2.25c rice)", "Est. Calories": 790.0, "Protein (g)": 40.0, "Carbs (g)": 105.0, "Fat (g)": 24.0}, {"Meal": "Italian Sausage (4 links + 2c rice)", "Est. Calories": 1200.0, "Protein (g)": 66.0, "Carbs (g)": 100.0, "Fat (g)": 70.0}, {"Meal": "Steak (4.5 slices + 2.25c rice)", "Est. Calories": 1040.0, "Protein (g)": 68.0, "Carbs (g)": 102.0, "Fat (g)": 40.0}, {"Meal": "Korean Curry (3c curry + 2c rice)", "Est. Calories": 920.0, "Protein (g)": 42.0, "Carbs (g)": 135.0, "Fat (g)": 26.0}, {"Meal": "Beef Round Bottom (4.5 slices + 1.5c rice)", "Est. Calories": 660.0, "Protein (g)": 48.0, "Carbs (g)": 70.0, "Fat (g)": 20.0}, {"Meal": "Борщ (Borsh) (1 bowl)", "Est. Calories": 350.0, "Protein (g)": 22.0, "Carbs (g)": 38.0, "Fat (g)": 12.0}, {"Meal": "Щи (Shchi) (0.9 bowl)", "Est. Calories": 310.0, "Protein (g)": 20.0, "Carbs (g)": 32.0, "Fat (g)": 10.0}, {"Meal": "Peanut Butter and Jelly", "Est. Calories": 380.0, "Protein (g)": 13.0, "Carbs (g)": 51.0, "Fat (g)": 16.0}],
 
                 init() {
-                    const saved = JSON.parse(localStorage.getItem('ctrack_data') || '{}');
-                    if (saved.dailyLog) this.dailyLog = saved.dailyLog;
-                    if (saved.goals) this.goals = saved.goals;
+                    const data = JSON.parse(localStorage.getItem('ctrack_pro_v2') || '{}');
+                    if (data.dailyLog) this.dailyLog = data.dailyLog;
+                    if (data.goals) this.goals = data.goals;
                     this.calculateTotals();
-                    
-                    // Hide Splash
-                    setTimeout(() => document.getElementById('splash').style.opacity = '0', 2000);
-                    setTimeout(() => document.getElementById('splash').style.display = 'none', 2500);
-                    
+                    setTimeout(() => { this.loading = false; }, 2000);
                     lucide.createIcons();
                 },
 
@@ -194,75 +204,80 @@
                     return this.moma.filter(f => f.Meal.toLowerCase().includes(this.search.toLowerCase()));
                 },
 
-                logFood(name, cal, p, c, f) {
-                    this.dailyLog.unshift({ name, cal, protein: p, carbs: c, fat: f, ts: Date.now() });
+                openQuantity(name, cal, p, c, f) {
+                    this.activeFood = { name, cal, p, c, f };
+                    this.modalQty = 1;
+                    this.showModal = true;
+                },
+
+                confirmAdd() {
+                    const q = parseFloat(this.modalQty);
+                    this.dailyLog.unshift({
+                        id: Date.now(),
+                        name: this.activeFood.name,
+                        cal: Math.round(this.activeFood.cal * q),
+                        p: Math.round(this.activeFood.p * q),
+                        c: Math.round(this.activeFood.c * q),
+                        f: Math.round(this.activeFood.f * q),
+                        qty: q
+                    });
                     this.calculateTotals();
                     this.save();
+                    this.showModal = false;
                     this.view = 'home';
                     this.search = '';
+                    setTimeout(() => lucide.createIcons(), 50);
+                },
+
+                deleteItem(index) {
+                    this.dailyLog.splice(index, 1);
+                    this.calculateTotals();
+                    this.save();
                 },
 
                 calculateTotals() {
-                    this.totals = this.dailyLog.reduce((acc, curr) => {
-                        acc.cal += curr.cal;
-                        acc.protein += curr.protein;
-                        acc.carbs += curr.carbs;
-                        acc.fat += curr.fat;
-                        return acc;
-                    }, { cal: 0, protein: 0, carbs: 0, fat: 0 });
+                    this.totals = this.dailyLog.reduce((acc, curr) => ({
+                        cal: acc.cal + curr.cal, p: acc.p + curr.p, c: acc.c + curr.c, f: acc.f + curr.f
+                    }), { cal: 0, p: 0, c: 0, f: 0 });
                 },
 
-                applyNto() {
-                    this.goals = { cal: 2752, protein: 160, fat: 68, carbs: 375 };
+                setNto() {
+                    this.goals = { cal: 2752, p: 160, f: 68, c: 375 };
                     this.save();
-                    alert("Nto Goals Set!");
+                    alert("Nto Goals Applied!");
                 },
 
-                toggleScanner() {
-                    if (this.scanning) {
+                save() {
+                    localStorage.setItem('ctrack_pro_v2', JSON.stringify({ dailyLog: this.dailyLog, goals: this.goals }));
+                },
+
+                startScanning() {
+                    this.scanning = true;
+                    this.scanner = new Html5Qrcode("reader");
+                    const config = { fps: 20, qrbox: { width: 280, height: 150 }, aspectRatio: 1.77 };
+                    
+                    this.scanner.start({ facingMode: "environment" }, config, async (code) => {
                         this.scanner.stop();
                         this.scanning = false;
-                    } else {
-                        this.scanning = true;
-                        this.scanner = new Html5Qrcode("qr-reader");
-                        this.scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
-                            (code) => this.fetchBarcode(code));
-                    }
+                        this.fetchApi(code);
+                    });
                 },
 
-                async fetchBarcode(code) {
-                    this.scanner.stop();
-                    this.scanning = false;
+                async fetchApi(code) {
                     try {
                         const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`);
                         const data = await res.json();
                         if (data.status === 1) {
                             const p = data.product;
-                            const nut = p.nutriments;
-                            this.logFood(p.product_name, Math.round(nut['energy-kcal_100g']), Math.round(nut.proteins_100g), Math.round(nut.carbohydrates_100g), Math.round(nut.fat_100g));
+                            const n = p.nutriments;
+                            this.openQuantity(p.product_name || "Unknown Item", 
+                                n['energy-kcal_100g'] || 0, n.proteins_100g || 0, n.carbohydrates_100g || 0, n.fat_100g || 0);
                         } else {
-                            alert("Food not found in database.");
+                            alert("Product not found.");
                         }
-                    } catch (e) { alert("Network error."); }
-                },
-
-                save() {
-                    localStorage.setItem('ctrack_data', JSON.stringify({ dailyLog: this.dailyLog, goals: this.goals }));
-                },
-
-                clearLog() {
-                    if (confirm("Clear all entries?")) {
-                        this.dailyLog = [];
-                        this.calculateTotals();
-                        this.save();
-                    }
+                    } catch (e) { alert("API Error."); }
                 }
             }
-        }
-
-        // Register Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
         }
     </script>
 </body>
