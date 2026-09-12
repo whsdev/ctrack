@@ -1,284 +1,635 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C-Track | Pro</title>
-    
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="https://i.ibb.co/B5DqV2rW/ctrack250.jpg">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Lanes — Nutrition Tracker</title>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
-        :root { --ios-green: #28cd41; }
-        body { font-family: 'SF Pro Display', -apple-system, sans-serif; background: #f2f2f7; overflow-x: hidden; }
-        .ios-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.5); }
-        .ios-blur { background: rgba(255, 255, 255, 0.75); backdrop-filter: saturate(180%) blur(25px); -webkit-backdrop-filter: saturate(180%) blur(25px); }
-        .safe-t { padding-top: env(safe-area-inset-top); }
-        .safe-b { padding-bottom: env(safe-area-inset-bottom); }
-        [x-cloak] { display: none !important; }
-    </style>
+<link rel="apple-touch-icon" href="https://i.ibb.co/B5DqV2rW/ctrack250.jpg">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { fontFamily: {
+    display: ['"Space Grotesk"', 'sans-serif'],
+    body: ['"Public Sans"', 'sans-serif']
+  } } } }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+<style>
+  :root{
+    --bg:#F4F6F5; --ink:#12303A; --ink-soft:#5C7079; --card:#FFFFFF; --line:#DEE5E3;
+    --coral:#FF6A46; --pool:#2E86A6; --amber:#DE9A1F; --rose:#C85C7C; --good:#2F9E6E;
+  }
+  body{ font-family:'Public Sans', sans-serif; background:var(--bg); color:var(--ink); overflow-x:hidden; }
+  .font-display{ font-family:'Space Grotesk', sans-serif; }
+  .safe-t{ padding-top: env(safe-area-inset-top); }
+  .safe-b{ padding-bottom: env(safe-area-inset-bottom); }
+  [x-cloak]{ display:none !important; }
+  .lane-line{ background: repeating-linear-gradient(90deg, var(--line) 0 10px, transparent 10px 18px); height:1px; }
+  ::-webkit-scrollbar{ display:none; }
+</style>
 </head>
-<body x-data="nutritionPro()" x-init="init()">
+<body x-data="lanesApp()" x-init="init()">
 
-    <div id="splash" class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center transition-opacity duration-500" :class="loading ? 'opacity-100' : 'opacity-0 pointer-events-none'">
-        <img src="https://i.ibb.co/B5DqV2rW/ctrack250.jpg" class="w-28 h-28 rounded-3xl shadow-2xl mb-6">
-        <p class="text-green-600 font-bold tracking-widest uppercase text-xs">C-Track Pro</p>
+<div id="splash" class="fixed inset-0 z-[100] flex flex-col items-center justify-center transition-opacity duration-500" style="background:var(--ink);" :class="loading ? 'opacity-100' : 'opacity-0 pointer-events-none'">
+  <p class="font-display text-3xl font-bold tracking-tight text-white">Lanes</p>
+  <p class="text-[11px] mt-2 tracking-wide" style="color:#8FB4BC;">Fuel · Track · Build</p>
+</div>
+
+<main class="min-h-screen max-w-md mx-auto">
+  <div class="safe-t h-4"></div>
+
+  <!-- ============ TODAY ============ -->
+  <div x-show="view==='today'" x-cloak class="px-5 pb-32">
+    <header class="flex items-end justify-between mt-3 mb-5">
+      <div>
+        <p class="text-[13px]" style="color:var(--ink-soft);" x-text="dateLabel(today)"></p>
+        <h1 class="font-display text-2xl font-bold -mt-0.5">Today</h1>
+      </div>
+      <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style="background:var(--card); border:1px solid var(--line);">
+        <span class="text-base leading-none">🔥</span>
+        <span class="text-sm font-semibold" x-text="streak()"></span>
+        <span class="text-[11px]" style="color:var(--ink-soft);">day streak</span>
+      </div>
+    </header>
+
+    <!-- Calorie block -->
+    <div class="mb-6">
+      <div class="flex items-baseline gap-2">
+        <span class="font-display text-6xl font-bold tracking-tight" x-text="Math.max(0, goals.cal - totals.cal)"></span>
+        <span class="text-sm font-medium" style="color:var(--ink-soft);">cal left</span>
+      </div>
+      <p class="text-[13px] mt-1" style="color:var(--ink-soft);">
+        <span class="font-semibold" style="color:var(--ink);" x-text="totals.cal"></span> logged of <span x-text="goals.cal"></span> goal
+      </p>
+      <div class="w-full h-2.5 rounded-full mt-3 overflow-hidden" style="background:#E9EDEC;">
+        <div class="h-full rounded-full transition-all duration-500" :style="`width:${Math.min(100,(totals.cal/goals.cal)*100)}%; background:var(--coral);`"></div>
+      </div>
     </div>
 
-    <main class="min-h-screen">
-        <div class="safe-t h-12"></div>
-
-        <div x-show="view === 'home'" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" class="px-5 pb-32">
-            <header class="mb-8 mt-4">
-                <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Today</h1>
-            </header>
-
-            <div class="ios-card p-10 text-center shadow-lg mb-8 relative overflow-hidden">
-                <div class="relative z-10">
-                    <p class="text-5xl font-black text-slate-800" x-text="Math.max(0, goals.cal - totals.cal)"></p>
-                    <p class="text-gray-400 font-bold uppercase text-[10px] tracking-widest mt-1">Calories Left</p>
-                </div>
-                <div class="absolute inset-0 flex items-center justify-center opacity-10">
-                    <i data-lucide="activity" class="w-40 h-40 text-green-500"></i>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-4 mb-10">
-                <div class="ios-card p-4 text-center">
-                    <p class="text-[10px] font-bold text-blue-500 uppercase">Protein</p>
-                    <p class="text-lg font-bold" x-text="Math.round(totals.p) + 'g'"></p>
-                </div>
-                <div class="ios-card p-4 text-center">
-                    <p class="text-[10px] font-bold text-orange-500 uppercase">Carbs</p>
-                    <p class="text-lg font-bold" x-text="Math.round(totals.c) + 'g'"></p>
-                </div>
-                <div class="ios-card p-4 text-center">
-                    <p class="text-[10px] font-bold text-rose-500 uppercase">Fat</p>
-                    <p class="text-lg font-bold" x-text="Math.round(totals.f) + 'g'"></p>
-                </div>
-            </div>
-
-            <div class="space-y-3">
-                <template x-for="(log, index) in dailyLog" :key="log.id">
-                    <div class="ios-card p-4 flex justify-between items-center group">
-                        <div class="flex-1">
-                            <p class="font-bold text-slate-800" x-text="log.name"></p>
-                            <p class="text-xs text-gray-400" x-text="log.qty + ' units • ' + log.cal + ' kcal'"></p>
-                        </div>
-                        <button @click="deleteItem(index)" class="p-2 text-red-400 active:text-red-600 transition">
-                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                </template>
-            </div>
+    <!-- Macro rows -->
+    <div class="space-y-4 mb-7">
+      <template x-for="m in macroRows()" :key="m.key">
+        <div>
+          <div class="flex justify-between items-baseline mb-1">
+            <span class="text-[13px] font-semibold" x-text="m.label"></span>
+            <span class="text-[13px]" style="color:var(--ink-soft);"><span class="font-semibold" style="color:var(--ink);" x-text="m.val"></span><span x-text="'g / ' + m.goal + 'g'"></span></span>
+          </div>
+          <div class="w-full h-1.5 rounded-full overflow-hidden" style="background:#E9EDEC;">
+            <div class="h-full rounded-full transition-all duration-500" :style="`width:${Math.min(100,(m.val/m.goal)*100)}%; background:${m.color};`"></div>
+          </div>
         </div>
-
-        <div x-show="view === 'add'" x-transition class="px-5 pb-32">
-            <div class="sticky top-0 bg-gray-50 pt-4 pb-4 z-20 flex gap-2">
-                <div class="flex-1 relative">
-                    <i data-lucide="search" class="absolute left-4 top-3.5 w-4 h-4 text-gray-400"></i>
-                    <input type="text" x-model="search" placeholder="Search Moma's..." 
-                        class="w-full bg-white rounded-2xl py-3.5 pl-11 pr-4 outline-none shadow-sm">
-                </div>
-                <button @click="startScanning()" class="bg-white p-3.5 rounded-2xl shadow-sm text-green-600">
-                    <i data-lucide="scan-barcode"></i>
-                </button>
-            </div>
-
-            <div id="reader" class="rounded-3xl overflow-hidden mb-6 bg-black" x-show="scanning"></div>
-
-            <div class="space-y-3">
-                <div @click="openQuantity('Default Protein Shake', 830, 34, 83, 49)" class="ios-card p-5 bg-green-500 text-white cursor-pointer active:scale-95 transition">
-                    <p class="font-bold">Default Protein Shake</p>
-                    <p class="text-xs opacity-80">Almond Butter, Banana, Milk, Protein</p>
-                </div>
-
-                <template x-for="food in filteredMoma" :key="food.Meal">
-                    <div @click="openQuantity(food.Meal, food['Est. Calories'], food['Protein (g)'], food['Carbs (g)'], food['Fat (g)'])" 
-                        class="ios-card p-4 flex justify-between items-center active:bg-green-50 transition cursor-pointer">
-                        <div>
-                            <p class="font-bold text-sm text-slate-700" x-text="food.Meal"></p>
-                            <p class="text-xs text-gray-400" x-text="food['Est. Calories'] + ' kcal'"></p>
-                        </div>
-                        <i data-lucide="plus" class="text-green-500 w-4 h-4"></i>
-                    </div>
-                </template>
-            </div>
-        </div>
-
-        <div x-show="view === 'settings'" x-transition class="px-5 pb-32">
-            <h1 class="text-3xl font-bold mb-6 pt-4">Profile</h1>
-            <div class="ios-card p-6 space-y-6">
-                <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Quick Goal</p>
-                    <button @click="setNto()" class="w-full bg-green-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition">
-                        SET "NTO" CALORIE GOAL
-                    </button>
-                    <p class="text-[10px] text-center text-gray-400 mt-2">160g Protein | 68g Fat | 375g Carbs</p>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <div x-show="showModal" class="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm" x-cloak>
-        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl transition-all" @click.away="showModal = false"
-             x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0">
-            <h2 class="text-xl font-bold mb-2 text-center" x-text="activeFood.name"></h2>
-            <p class="text-center text-gray-400 text-sm mb-6">Enter quantity consumed</p>
-            
-            <div class="flex items-center justify-center gap-6 mb-8">
-                <button @click="modalQty = Math.max(0.25, modalQty - 0.25)" class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-2xl font-bold">-</button>
-                <div class="text-center">
-                    <input type="number" step="0.25" x-model="modalQty" class="w-20 text-center text-3xl font-bold outline-none">
-                    <p class="text-xs font-bold text-green-500 mt-1">SERVINGS</p>
-                </div>
-                <button @click="modalQty += 0.25" class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-2xl font-bold">+</button>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 mb-8">
-                <div class="bg-gray-50 p-3 rounded-2xl text-center">
-                    <p class="text-[10px] text-gray-400 font-bold uppercase">Resulting Cal</p>
-                    <p class="font-bold text-lg" x-text="Math.round(activeFood.cal * modalQty)"></p>
-                </div>
-                <div class="bg-gray-50 p-3 rounded-2xl text-center">
-                    <p class="text-[10px] text-gray-400 font-bold uppercase">Protein</p>
-                    <p class="font-bold text-lg text-blue-500" x-text="Math.round(activeFood.p * modalQty) + 'g'"></p>
-                </div>
-            </div>
-
-            <button @click="confirmAdd()" class="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-xl active:scale-95 transition">
-                Add to Daily Intake
-            </button>
-        </div>
+      </template>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 ios-blur safe-b border-t border-gray-200/50 z-50">
-        <div class="flex justify-around items-center h-20 max-w-md mx-auto">
-            <button @click="view = 'home'" :class="view === 'home' ? 'text-green-600' : 'text-gray-400'" class="flex flex-col items-center">
-                <i data-lucide="home" class="w-6 h-6"></i>
-                <span class="text-[10px] font-bold mt-1">Today</span>
-            </button>
-            <button @click="view = 'add'" :class="view === 'add' ? 'text-green-600' : 'text-gray-400'" class="flex flex-col items-center">
-                <i data-lucide="search" class="w-6 h-6"></i>
-                <span class="text-[10px] font-bold mt-1">Log</span>
-            </button>
-            <button @click="view = 'settings'" :class="view === 'settings' ? 'text-green-600' : 'text-gray-400'" class="flex flex-col items-center">
-                <i data-lucide="user" class="w-6 h-6"></i>
-                <span class="text-[10px] font-bold mt-1">Profile</span>
-            </button>
+    <div class="lane-line mb-6"></div>
+
+    <!-- Water -->
+    <div class="mb-7">
+      <div class="flex justify-between items-baseline mb-2.5">
+        <p class="text-[13px] font-semibold">Water</p>
+        <p class="text-[13px]" style="color:var(--ink-soft);"><span class="font-semibold" style="color:var(--ink);" x-text="todayData().water"></span><span x-text="' / ' + goals.water + ' oz'"></span></p>
+      </div>
+      <div class="flex gap-1.5">
+        <template x-for="i in 8" :key="i">
+          <button @click="toggleWater(i-1)" class="flex-1 h-9 rounded-lg flex items-center justify-center transition"
+            :style="todayData().water >= i*16 ? 'background:var(--pool);' : 'background:#E9EDEC;'">
+            <i data-lucide="droplet" class="w-4 h-4" :style="todayData().water >= i*16 ? 'color:white;' : 'color:#B7C3C1;'"></i>
+          </button>
+        </template>
+      </div>
+    </div>
+
+    <div class="lane-line mb-6"></div>
+
+    <!-- Today's log -->
+    <div class="flex items-center justify-between mb-3">
+      <p class="text-[13px] font-semibold">Today's log</p>
+      <button @click="view='log'" class="text-[13px] font-semibold" style="color:var(--coral);">+ Add food</button>
+    </div>
+
+    <template x-if="todayData().log.length === 0">
+      <div class="py-10 text-center rounded-2xl" style="border:1px dashed var(--line);">
+        <p class="text-sm" style="color:var(--ink-soft);">Nothing logged yet.</p>
+        <button @click="view='log'" class="mt-2 text-sm font-semibold" style="color:var(--coral);">Log your first meal →</button>
+      </div>
+    </template>
+
+    <template x-for="slot in slotOrder" :key="slot">
+      <div x-show="groupedLog()[slot] && groupedLog()[slot].length" class="mb-5">
+        <p class="text-[11px] font-semibold uppercase tracking-wide mb-2" style="color:var(--ink-soft);" x-text="slotLabels[slot]"></p>
+        <div class="space-y-2">
+          <template x-for="item in (groupedLog()[slot]||[])" :key="item.id">
+            <div class="flex justify-between items-center py-3 px-4 rounded-2xl" style="background:var(--card); border:1px solid var(--line);">
+              <div class="flex-1 pr-3">
+                <p class="font-semibold text-sm" x-text="item.name"></p>
+                <p class="text-[12px] mt-0.5" style="color:var(--ink-soft);" x-text="item.cal + ' cal · ' + item.p + 'g P · ' + item.c + 'g C · ' + item.f + 'g F'"></p>
+              </div>
+              <button @click="deleteItem(item.id)" class="p-1.5 shrink-0" style="color:#C9463B;">
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </template>
         </div>
-    </nav>
+      </div>
+    </template>
+  </div>
 
-    <script>
-        function nutritionPro() {
-            return {
-                view: 'home',
-                loading: true,
-                search: '',
-                scanning: false,
-                showModal: false,
-                modalQty: 1,
-                activeFood: {},
-                goals: { cal: 2500, p: 150, c: 300, f: 80 },
-                totals: { cal: 0, p: 0, c: 0, f: 0 },
-                dailyLog: [],
-                moma: [{"Meal": "Chicken Katsu (3 pcs + 2.5c rice)", "Est. Calories": 1000.0, "Protein (g)": 58.0, "Carbs (g)": 128.0, "Fat (g)": 24.0}, {"Meal": "Mabu Tofu (2.5c + 2c rice)", "Est. Calories": 940.0, "Protein (g)": 57.0, "Carbs (g)": 102.0, "Fat (g)": 40.0}, {"Meal": "Котлетки (4 patties)", "Est. Calories": 840.0, "Protein (g)": 46.0, "Carbs (g)": 48.0, "Fat (g)": 52.0}, {"Meal": "Spaghetti (1/8th of the pot)", "Est. Calories": 810.0, "Protein (g)": 44.0, "Carbs (g)": 92.0, "Fat (g)": 30.0}, {"Meal": "Chicken Teriyaki (2.5 drummie + 2.25c rice)", "Est. Calories": 820.0, "Protein (g)": 42.0, "Carbs (g)": 115.0, "Fat (g)": 22.0}, {"Meal": "White Soup (1.25 bowls)", "Est. Calories": 680.0, "Protein (g)": 32.0, "Carbs (g)": 42.0, "Fat (g)": 46.0}, {"Meal": "Рассольник (1 bowl)", "Est. Calories": 380.0, "Protein (g)": 18.0, "Carbs (g)": 45.0, "Fat (g)": 14.0}, {"Meal": "Tomato Soup (+ Grilled Cheese)", "Est. Calories": 720.0, "Protein (g)": 22.0, "Carbs (g)": 68.0, "Fat (g)": 42.0}, {"Meal": "Chicken Drumsticks (2.5 drummie + 2.25c rice)", "Est. Calories": 790.0, "Protein (g)": 40.0, "Carbs (g)": 105.0, "Fat (g)": 24.0}, {"Meal": "Italian Sausage (4 links + 2c rice)", "Est. Calories": 1200.0, "Protein (g)": 66.0, "Carbs (g)": 100.0, "Fat (g)": 70.0}, {"Meal": "Steak (4.5 slices + 2.25c rice)", "Est. Calories": 1040.0, "Protein (g)": 68.0, "Carbs (g)": 102.0, "Fat (g)": 40.0}, {"Meal": "Korean Curry (3c curry + 2c rice)", "Est. Calories": 920.0, "Protein (g)": 42.0, "Carbs (g)": 135.0, "Fat (g)": 26.0}, {"Meal": "Beef Round Bottom (4.5 slices + 1.5c rice)", "Est. Calories": 660.0, "Protein (g)": 48.0, "Carbs (g)": 70.0, "Fat (g)": 20.0}, {"Meal": "Борщ (Borsh) (1 bowl)", "Est. Calories": 350.0, "Protein (g)": 22.0, "Carbs (g)": 38.0, "Fat (g)": 12.0}, {"Meal": "Щи (Shchi) (0.9 bowl)", "Est. Calories": 310.0, "Protein (g)": 20.0, "Carbs (g)": 32.0, "Fat (g)": 10.0}, {"Meal": "Peanut Butter and Jelly", "Est. Calories": 380.0, "Protein (g)": 13.0, "Carbs (g)": 51.0, "Fat (g)": 16.0}],
+  <!-- ============ LOG ============ -->
+  <div x-show="view==='log'" x-cloak class="px-5 pb-32">
+    <h1 class="font-display text-2xl font-bold mt-3 mb-4">Log food</h1>
 
-                init() {
-                    const data = JSON.parse(localStorage.getItem('ctrack_pro_v2') || '{}');
-                    if (data.dailyLog) this.dailyLog = data.dailyLog;
-                    if (data.goals) this.goals = data.goals;
-                    this.calculateTotals();
-                    setTimeout(() => { this.loading = false; }, 2000);
-                    lucide.createIcons();
-                },
+    <div class="flex gap-2 overflow-x-auto pb-1 mb-4">
+      <template x-for="t in tagFilters" :key="t.key">
+        <button @click="activeTag = t.key" class="shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition"
+          :style="activeTag===t.key ? 'background:var(--ink); color:white;' : 'background:var(--card); color:var(--ink-soft); border:1px solid var(--line);'"
+          x-text="t.label"></button>
+      </template>
+    </div>
 
-                get filteredMoma() {
-                    return this.moma.filter(f => f.Meal.toLowerCase().includes(this.search.toLowerCase()));
-                },
+    <div class="flex gap-2 mb-3">
+      <div class="flex-1 relative">
+        <i data-lucide="search" class="absolute left-3.5 top-3 w-4 h-4" style="color:var(--ink-soft);"></i>
+        <input type="text" x-model="search" placeholder="Search foods..."
+          class="w-full rounded-2xl py-3 pl-10 pr-4 outline-none text-sm" style="background:var(--card); border:1px solid var(--line);">
+      </div>
+      <button @click="startScanning()" class="p-3 rounded-2xl" style="background:var(--card); border:1px solid var(--line); color:var(--pool);">
+        <i data-lucide="scan-barcode" class="w-5 h-5"></i>
+      </button>
+    </div>
 
-                openQuantity(name, cal, p, c, f) {
-                    this.activeFood = { name, cal, p, c, f };
-                    this.modalQty = 1;
-                    this.showModal = true;
-                },
+    <div id="reader" class="rounded-2xl overflow-hidden mb-4 bg-black" x-show="scanning"></div>
 
-                confirmAdd() {
-                    const q = parseFloat(this.modalQty);
-                    this.dailyLog.unshift({
-                        id: Date.now(),
-                        name: this.activeFood.name,
-                        cal: Math.round(this.activeFood.cal * q),
-                        p: Math.round(this.activeFood.p * q),
-                        c: Math.round(this.activeFood.c * q),
-                        f: Math.round(this.activeFood.f * q),
-                        qty: q
-                    });
-                    this.calculateTotals();
-                    this.save();
-                    this.showModal = false;
-                    this.view = 'home';
-                    this.search = '';
-                    setTimeout(() => lucide.createIcons(), 50);
-                },
+    <div class="space-y-2.5">
+      <template x-for="food in filteredLibrary()" :key="food.name">
+        <div @click="openQuantity(food)" class="p-4 rounded-2xl cursor-pointer active:scale-[0.98] transition" style="background:var(--card); border:1px solid var(--line);">
+          <div class="flex justify-between items-start">
+            <p class="font-semibold text-sm pr-3" x-text="food.name"></p>
+            <p class="text-sm font-semibold shrink-0" style="color:var(--coral);" x-text="food.cal + ' cal'"></p>
+          </div>
+          <p class="text-[12px] mt-1" style="color:var(--ink-soft);" x-text="food.note"></p>
+          <p class="text-[12px] mt-1.5 font-medium" style="color:var(--ink-soft);" x-text="food.p+'g P · '+food.c+'g C · '+food.f+'g F'"></p>
+        </div>
+      </template>
+      <template x-if="filteredLibrary().length===0">
+        <p class="text-sm text-center py-8" style="color:var(--ink-soft);">No foods match your search.</p>
+      </template>
+    </div>
+  </div>
 
-                deleteItem(index) {
-                    this.dailyLog.splice(index, 1);
-                    this.calculateTotals();
-                    this.save();
-                },
+  <!-- ============ TRENDS ============ -->
+  <div x-show="view==='trends'" x-cloak class="px-5 pb-32">
+    <h1 class="font-display text-2xl font-bold mt-3 mb-5">Trends</h1>
 
-                calculateTotals() {
-                    this.totals = this.dailyLog.reduce((acc, curr) => ({
-                        cal: acc.cal + curr.cal, p: acc.p + curr.p, c: acc.c + curr.c, f: acc.f + curr.f
-                    }), { cal: 0, p: 0, c: 0, f: 0 });
-                },
+    <p class="text-[13px] font-semibold mb-3">Last 7 days</p>
+    <div class="relative h-36 mb-1 px-1">
+      <div class="absolute left-0 right-0 border-t border-dashed" :style="`bottom:${goalLinePct()}%; border-color:var(--coral);`"></div>
+      <div class="flex items-end h-full gap-2">
+        <template x-for="d in last7Days()" :key="d.date">
+          <div class="flex-1 flex flex-col items-center justify-end h-full">
+            <div class="w-full rounded-t-md transition-all duration-500" :style="`height:${d.pct}%; background:${d.date===today?'var(--coral)':'var(--pool)'}; min-height:2px;`"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+    <div class="flex gap-2 mb-8">
+      <template x-for="d in last7Days()" :key="d.date+'l'">
+        <p class="flex-1 text-center text-[11px]" style="color:var(--ink-soft);" x-text="d.label"></p>
+      </template>
+    </div>
 
-                setNto() {
-                    this.goals = { cal: 2752, p: 160, f: 68, c: 375 };
-                    this.save();
-                    alert("Nto Goals Applied!");
-                },
+    <div class="lane-line mb-6"></div>
 
-                save() {
-                    localStorage.setItem('ctrack_pro_v2', JSON.stringify({ dailyLog: this.dailyLog, goals: this.goals }));
-                },
+    <p class="text-[13px] font-semibold mb-3">Weight (daily weigh-in)</p>
+    <div class="flex gap-2 mb-4">
+      <input type="number" step="0.1" x-model="weightInput" placeholder="lbs today"
+        class="flex-1 rounded-2xl py-3 px-4 outline-none text-sm" style="background:var(--card); border:1px solid var(--line);">
+      <button @click="logWeight()" class="px-5 rounded-2xl font-semibold text-sm text-white" style="background:var(--ink);">Log</button>
+    </div>
+    <p class="text-[12px] mb-4" style="color:var(--ink-soft);">Protocol target: 0.5–1 lb gain per week. If it stalls two weeks running, add ~200 cal to your goal.</p>
 
-                startScanning() {
-                    this.scanning = true;
-                    this.scanner = new Html5Qrcode("reader");
-                    const config = { fps: 20, qrbox: { width: 280, height: 150 }, aspectRatio: 1.77 };
-                    
-                    this.scanner.start({ facingMode: "environment" }, config, async (code) => {
-                        this.scanner.stop();
-                        this.scanning = false;
-                        this.fetchApi(code);
-                    });
-                },
+    <div class="space-y-2">
+      <template x-for="(w,i) in recentWeights()" :key="w.date">
+        <div class="flex justify-between items-center py-2.5 px-4 rounded-2xl" style="background:var(--card); border:1px solid var(--line);">
+          <p class="text-sm" x-text="dateLabel(w.date)"></p>
+          <div class="flex items-center gap-2">
+            <p class="font-semibold text-sm" x-text="w.weight + ' lbs'"></p>
+            <span class="text-[12px]" x-show="weightDelta(i)!==null" :style="weightDelta(i)>=0?'color:var(--good);':'color:#C9463B;'" x-text="weightDelta(i)!==null ? (weightDelta(i)>=0?'▲ ':'▼ ')+Math.abs(weightDelta(i)).toFixed(1) : ''"></span>
+          </div>
+        </div>
+      </template>
+      <template x-if="recentWeights().length===0">
+        <p class="text-sm text-center py-6" style="color:var(--ink-soft);">No weigh-ins logged yet.</p>
+      </template>
+    </div>
+  </div>
 
-                async fetchApi(code) {
-                    try {
-                        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`);
-                        const data = await res.json();
-                        if (data.status === 1) {
-                            const p = data.product;
-                            const n = p.nutriments;
-                            this.openQuantity(p.product_name || "Unknown Item", 
-                                n['energy-kcal_100g'] || 0, n.proteins_100g || 0, n.carbohydrates_100g || 0, n.fat_100g || 0);
-                        } else {
-                            alert("Product not found.");
-                        }
-                    } catch (e) { alert("API Error."); }
-                }
-            }
+  <!-- ============ GOALS ============ -->
+  <div x-show="view==='goals'" x-cloak class="px-5 pb-32">
+    <h1 class="font-display text-2xl font-bold mt-3 mb-5">Goals</h1>
+
+    <p class="text-[13px] font-semibold mb-3">Presets</p>
+    <div class="space-y-2 mb-7">
+      <button @click="applyPreset('preseason')" class="w-full text-left p-4 rounded-2xl" style="background:var(--card); border:1px solid var(--line);">
+        <p class="font-semibold text-sm">Pre-season build</p>
+        <p class="text-[12px] mt-0.5" style="color:var(--ink-soft);">3330 cal · 200g P · 395g C · 105g F</p>
+      </button>
+      <button @click="applyPreset('inseason')" class="w-full text-left p-4 rounded-2xl" style="background:var(--card); border:1px solid var(--line);">
+        <p class="font-semibold text-sm">In-season maintenance</p>
+        <p class="text-[12px] mt-0.5" style="color:var(--ink-soft);">4000 cal · 210g P · 490g C · 128g F</p>
+      </button>
+      <button @click="applyPreset('nto')" class="w-full text-left p-4 rounded-2xl" style="background:var(--card); border:1px solid var(--line);">
+        <p class="font-semibold text-sm">Custom goal (NTO)</p>
+        <p class="text-[12px] mt-0.5" style="color:var(--ink-soft);">2752 cal · 160g P · 375g C · 68g F</p>
+      </button>
+    </div>
+
+    <p class="text-[13px] font-semibold mb-3">Custom targets</p>
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div>
+        <label class="text-[12px]" style="color:var(--ink-soft);">Calories</label>
+        <input type="number" x-model.number="goalDraft.cal" class="w-full mt-1 rounded-xl py-2.5 px-3 outline-none text-sm" style="background:var(--card); border:1px solid var(--line);">
+      </div>
+      <div>
+        <label class="text-[12px]" style="color:var(--ink-soft);">Water (oz)</label>
+        <input type="number" x-model.number="goalDraft.water" class="w-full mt-1 rounded-xl py-2.5 px-3 outline-none text-sm" style="background:var(--card); border:1px solid var(--line);">
+      </div>
+      <div>
+        <label class="text-[12px]" style="color:var(--pool);">Protein (g)</label>
+        <input type="number" x-model.number="goalDraft.p" class="w-full mt-1 rounded-xl py-2.5 px-3 outline-none text-sm" style="background:var(--card); border:1px solid var(--line);">
+      </div>
+      <div>
+        <label class="text-[12px]" style="color:var(--amber);">Carbs (g)</label>
+        <input type="number" x-model.number="goalDraft.c" class="w-full mt-1 rounded-xl py-2.5 px-3 outline-none text-sm" style="background:var(--card); border:1px solid var(--line);">
+      </div>
+      <div>
+        <label class="text-[12px]" style="color:var(--rose);">Fat (g)</label>
+        <input type="number" x-model.number="goalDraft.f" class="w-full mt-1 rounded-xl py-2.5 px-3 outline-none text-sm" style="background:var(--card); border:1px solid var(--line);">
+      </div>
+    </div>
+    <button @click="saveGoals()" class="w-full py-3.5 rounded-2xl font-semibold text-white mb-8" style="background:var(--coral);">Save targets</button>
+
+    <div class="lane-line mb-6"></div>
+    <button @click="resetData()" class="w-full py-3.5 rounded-2xl font-semibold text-sm" style="color:#C9463B; border:1px solid #F0D2CE;">Reset all data</button>
+  </div>
+
+  <div class="h-4"></div>
+</main>
+
+<!-- Quantity modal -->
+<div x-show="showModal" x-cloak class="fixed inset-0 z-[60] flex items-end justify-center p-4" style="background:rgba(18,48,58,0.4);">
+  <div class="w-full max-w-md rounded-[28px] p-7 shadow-2xl" style="background:var(--card);" @click.away="showModal=false"
+    x-transition:enter="transition ease-out duration-250 transform" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0">
+    <h2 class="font-display text-lg font-bold text-center mb-1" x-text="activeFood.name"></h2>
+    <p class="text-center text-[12px] mb-1" style="color:var(--ink-soft);" x-text="activeFood.note || ''"></p>
+    <p class="text-center text-[12px] mb-5" style="color:var(--ink-soft);">Adjust servings if you ate more or less</p>
+
+    <div class="flex items-center justify-center gap-6 mb-6">
+      <button @click="modalQty = Math.max(0.25, modalQty - 0.25)" class="w-11 h-11 rounded-full flex items-center justify-center text-xl font-bold" style="background:#EEF1F0;">−</button>
+      <div class="text-center">
+        <input type="number" step="0.25" x-model.number="modalQty" class="w-20 text-center text-2xl font-display font-bold outline-none">
+        <p class="text-[11px] font-semibold mt-0.5" style="color:var(--coral);">servings</p>
+      </div>
+      <button @click="modalQty += 0.25" class="w-11 h-11 rounded-full flex items-center justify-center text-xl font-bold" style="background:#EEF1F0;">+</button>
+    </div>
+
+    <div class="grid grid-cols-4 gap-2 mb-4">
+      <div class="rounded-xl py-2.5 text-center" style="background:#F6F7F6;">
+        <p class="text-[10px] font-semibold" style="color:var(--ink-soft);">CAL</p>
+        <p class="font-display font-bold text-sm" x-text="Math.round(activeFood.cal*modalQty)"></p>
+      </div>
+      <div class="rounded-xl py-2.5 text-center" style="background:#F6F7F6;">
+        <p class="text-[10px] font-semibold" style="color:var(--pool);">PRO</p>
+        <p class="font-display font-bold text-sm" x-text="Math.round(activeFood.p*modalQty)"></p>
+      </div>
+      <div class="rounded-xl py-2.5 text-center" style="background:#F6F7F6;">
+        <p class="text-[10px] font-semibold" style="color:var(--amber);">CARB</p>
+        <p class="font-display font-bold text-sm" x-text="Math.round(activeFood.c*modalQty)"></p>
+      </div>
+      <div class="rounded-xl py-2.5 text-center" style="background:#F6F7F6;">
+        <p class="text-[10px] font-semibold" style="color:var(--rose);">FAT</p>
+        <p class="font-display font-bold text-sm" x-text="Math.round(activeFood.f*modalQty)"></p>
+      </div>
+    </div>
+
+    <p class="text-[12px] mb-2 font-semibold" style="color:var(--ink-soft);">Log to:</p>
+    <div class="flex gap-2 mb-5 overflow-x-auto pb-0.5">
+      <template x-for="s in slotOrder" :key="'m'+s">
+        <button @click="activeSlot=s" class="shrink-0 px-3 py-1.5 rounded-full text-[12px] font-semibold"
+          :style="activeSlot===s ? 'background:var(--ink); color:white;' : 'background:#EEF1F0; color:var(--ink-soft);'"
+          x-text="slotLabels[s]"></button>
+      </template>
+    </div>
+
+    <button @click="confirmAdd()" class="w-full font-semibold py-4 rounded-2xl text-white" style="background:var(--ink);">Add to today</button>
+  </div>
+</div>
+
+<nav class="fixed bottom-0 left-0 right-0 safe-b z-50" style="background:rgba(244,246,245,0.9); backdrop-filter:blur(20px); border-top:1px solid var(--line);">
+  <div class="flex justify-around items-center h-[74px] max-w-md mx-auto">
+    <button @click="view='today'" class="flex flex-col items-center gap-1" :style="view==='today' ? 'color:var(--coral)' : 'color:#9AA7A5'">
+      <i data-lucide="flame" class="w-5 h-5"></i>
+      <span class="text-[10px] font-semibold">Today</span>
+    </button>
+    <button @click="view='log'" class="flex flex-col items-center gap-1" :style="view==='log' ? 'color:var(--coral)' : 'color:#9AA7A5'">
+      <i data-lucide="plus-circle" class="w-5 h-5"></i>
+      <span class="text-[10px] font-semibold">Log</span>
+    </button>
+    <button @click="view='trends'" class="flex flex-col items-center gap-1" :style="view==='trends' ? 'color:var(--coral)' : 'color:#9AA7A5'">
+      <i data-lucide="trending-up" class="w-5 h-5"></i>
+      <span class="text-[10px] font-semibold">Trends</span>
+    </button>
+    <button @click="view='goals'" class="flex flex-col items-center gap-1" :style="view==='goals' ? 'color:var(--coral)' : 'color:#9AA7A5'">
+      <i data-lucide="target" class="w-5 h-5"></i>
+      <span class="text-[10px] font-semibold">Goals</span>
+    </button>
+  </div>
+</nav>
+
+<script>
+function lanesApp() {
+  return {
+    loading: true,
+    view: 'today',
+    search: '',
+    activeTag: 'all',
+    scanning: false,
+    showModal: false,
+    modalQty: 1,
+    activeFood: {},
+    activeSlot: 'other',
+    weightInput: '',
+    today: '',
+    db: { days: {}, weightHistory: [], goals: { cal: 4000, p: 210, c: 490, f: 128, water: 128 } },
+    goalDraft: { cal: 4000, p: 210, c: 490, f: 128, water: 128 },
+
+    slotOrder: ['breakfast','snack','lunch','postswim','dinner','shake','other'],
+    slotLabels: { breakfast:'Breakfast', snack:'Mid-day snack', lunch:'Lunch', postswim:'Post-swim', dinner:'Dinner', shake:'Bedtime shake', other:'Other' },
+    tagFilters: [
+      {key:'all', label:'All'}, {key:'breakfast', label:'Breakfast'}, {key:'snack', label:'Snack'},
+      {key:'lunch', label:'Lunch'}, {key:'postswim', label:'Post-swim'}, {key:'dinner', label:'Dinner'}, {key:'shake', label:'Shake'}
+    ],
+
+    library: [
+      // Breakfast
+      {name:'My usual breakfast', note:'1.5 cups protein cinnamon Cheerios + 1 cup whole milk + 1 protein shake', cal:530, p:46, c:57, f:15, tag:'breakfast'},
+      {name:'Mega breakfast (pre-season plan)', note:'1 cup dry oats cooked, 2 eggs + 1 cup egg whites, 1 banana, 1.5 scoop whey shake', cal:930, p:65, c:110, f:25, tag:'breakfast'},
+      {name:'Bagels + shake (in-season plan)', note:'2 bagels with cream cheese + a protein shake', cal:700, p:35, c:90, f:20, tag:'breakfast'},
+
+      // Mid-day snack
+      {name:'Trail mix + banana', note:'1/2 cup trail mix + 1 banana', cal:405, p:9, c:54, f:20, tag:'snack'},
+      {name:'Granola bars + chocolate milk', note:'2 granola bars + 1 cup low-fat chocolate milk', cal:370, p:11, c:55, f:9, tag:'snack'},
+      {name:'PB crackers + string cheese + apple', note:'1 pack PB crackers + 1 string cheese + a small apple', cal:375, p:11, c:46, f:17, tag:'snack'},
+
+      // Lunch
+      {name:'Jumbo school lunch', note:'Double portion entree + chocolate milk + fruit', cal:935, p:45, c:110, f:35, tag:'lunch'},
+      {name:'Jumbo lunch (tacos/nachos)', note:'2 servings tacos or nachos + chocolate milk + fruit', cal:950, p:45, c:110, f:35, tag:'lunch'},
+
+      // Post-swim
+      {name:'Core Power + banana + pretzels', note:'11.5oz Core Power shake + banana + small handful pretzels', cal:385, p:27, c:57, f:5.5, tag:'postswim'},
+      {name:'Chocolate milk + banana', note:'16oz low-fat chocolate milk + 1 banana', cal:405, p:17, c:85, f:1, tag:'postswim'},
+      {name:'Sports drink + protein bar', note:'20oz Gatorade/BodyArmor + 1 protein bar', cal:320, p:20, c:58, f:6, tag:'postswim'},
+
+      // Dinner - Moma's rotation
+      {name:'Chicken Katsu', note:'3 pieces (~1/3 breast each) + tonkatsu sauce + 2.5 cups rice', cal:1000, p:58, c:128, f:24, tag:'dinner'},
+      {name:'Mabu Tofu', note:'2.5 cups tofu & beef + 2 cups rice', cal:940, p:57, c:102, f:40, tag:'dinner'},
+      {name:'Котлетки', note:'4 patties (~1/2 cup each)', cal:840, p:46, c:48, f:52, tag:'dinner'},
+      {name:'Spaghetti', note:'~2.5 cups pasta with meat sauce, 9-inch plate', cal:810, p:44, c:92, f:30, tag:'dinner'},
+      {name:'Chicken Teriyaki', note:'2.5 drumsticks + 2.25 cups rice', cal:820, p:42, c:115, f:22, tag:'dinner'},
+      {name:'White Soup', note:'1.25 bowls (~2.2 cups)', cal:680, p:32, c:42, f:46, tag:'dinner'},
+      {name:'Рассольник', note:'1 bowl (~1.75 cups)', cal:380, p:18, c:45, f:14, tag:'dinner'},
+      {name:'Tomato Soup + Grilled Cheese', note:'~1.5 cups soup + 1 grilled cheese sandwich', cal:720, p:22, c:68, f:42, tag:'dinner'},
+      {name:'Chicken Drumsticks', note:'2.25 drumsticks + 2.25 cups rice', cal:790, p:40, c:105, f:24, tag:'dinner'},
+      {name:'Italian Sausage', note:'4 links + 2 cups rice', cal:1200, p:66, c:100, f:70, tag:'dinner'},
+      {name:'Steak', note:'4.5 pieces (~4x4in each) + 2.25 cups rice', cal:1040, p:68, c:102, f:40, tag:'dinner'},
+      {name:'Korean Curry', note:'~3 cups curry + 2 cups rice', cal:920, p:42, c:135, f:26, tag:'dinner'},
+      {name:'Beef Round Bottom', note:'4.5 slices (3-5mm thick) + 1.5 cups rice', cal:660, p:48, c:70, f:20, tag:'dinner'},
+      {name:'Борщ', note:'1 bowl (~1.75 cups)', cal:350, p:22, c:38, f:12, tag:'dinner'},
+      {name:'Щи', note:'1 bowl, slightly under (~1.6 cups)', cal:310, p:20, c:32, f:10, tag:'dinner'},
+
+      // Shake
+      {name:'Growth shake (revised)', note:'1.5 cups whole milk, 1 scoop whey, 1 banana, 1/2 cup oats blended, 1 tbsp peanut butter, 1 tbsp honey', cal:760, p:46, c:98, f:27, tag:'shake'},
+      {name:'Almond butter shake (original)', note:'~4-5 tbsp almond butter, banana, whole milk, whey, honey — higher fat', cal:830, p:34, c:83, f:49, tag:'shake'},
+    ],
+
+    init() {
+      const saved = JSON.parse(localStorage.getItem('lanes_tracker_v1') || 'null');
+      if (saved) this.db = saved;
+      this.today = this.localDate(new Date());
+      this.ensureDay(this.today);
+      this.goalDraft = { ...this.db.goals };
+      this.save();
+      setTimeout(() => { this.loading = false; }, 1200);
+      this.$nextTick(() => lucide.createIcons());
+      this.$watch('view', () => this.$nextTick(() => lucide.createIcons()));
+      this.$watch('showModal', () => this.$nextTick(() => lucide.createIcons()));
+      this.$watch('scanning', () => this.$nextTick(() => lucide.createIcons()));
+    },
+
+    localDate(d) { return d.toLocaleDateString('en-CA'); },
+
+    dateLabel(dateStr) {
+      const d = new Date(dateStr + 'T12:00:00');
+      const isToday = dateStr === this.today;
+      return (isToday ? 'Today · ' : '') + d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    },
+
+    ensureDay(dateStr) {
+      if (!this.db.days[dateStr]) this.db.days[dateStr] = { log: [], water: 0 };
+    },
+
+    todayData() { this.ensureDay(this.today); return this.db.days[this.today]; },
+
+    get goals() { return this.db.goals; },
+
+    get totals() {
+      return this.todayData().log.reduce((acc, i) => ({
+        cal: acc.cal + i.cal, p: acc.p + i.p, c: acc.c + i.c, f: acc.f + i.f
+      }), { cal:0, p:0, c:0, f:0 });
+    },
+
+    macroRows() {
+      const t = this.totals, g = this.goals;
+      return [
+        { key:'p', label:'Protein', val:t.p, goal:g.p, color:'var(--pool)' },
+        { key:'c', label:'Carbs', val:t.c, goal:g.c, color:'var(--amber)' },
+        { key:'f', label:'Fat', val:t.f, goal:g.f, color:'var(--rose)' },
+      ];
+    },
+
+    groupedLog() {
+      const groups = {};
+      this.todayData().log.forEach(item => {
+        const s = item.slot || 'other';
+        if (!groups[s]) groups[s] = [];
+        groups[s].push(item);
+      });
+      return groups;
+    },
+
+    filteredLibrary() {
+      return this.library.filter(f => {
+        const matchesTag = this.activeTag === 'all' || f.tag === this.activeTag;
+        const matchesSearch = f.name.toLowerCase().includes(this.search.toLowerCase());
+        return matchesTag && matchesSearch;
+      });
+    },
+
+    openQuantity(food) {
+      this.activeFood = food;
+      this.modalQty = 1;
+      this.activeSlot = food.tag === 'postswim' ? 'postswim' : food.tag;
+      this.showModal = true;
+    },
+
+    confirmAdd() {
+      const q = parseFloat(this.modalQty) || 1;
+      const f = this.activeFood;
+      this.todayData().log.unshift({
+        id: Date.now(),
+        name: f.name,
+        cal: Math.round(f.cal * q), p: Math.round(f.p * q), c: Math.round(f.c * q), f: Math.round(f.f * q),
+        qty: q, slot: this.activeSlot
+      });
+      this.save();
+      this.showModal = false;
+      this.search = '';
+      this.view = 'today';
+    },
+
+    deleteItem(id) {
+      const log = this.todayData().log;
+      const idx = log.findIndex(i => i.id === id);
+      if (idx > -1) log.splice(idx, 1);
+      this.save();
+    },
+
+    toggleWater(i) {
+      const cur = this.todayData().water;
+      this.todayData().water = cur >= (i+1)*16 ? i*16 : (i+1)*16;
+      this.save();
+    },
+
+    logWeight() {
+      const w = parseFloat(this.weightInput);
+      if (!w || w <= 0) return;
+      const hist = this.db.weightHistory.filter(e => e.date !== this.today);
+      hist.push({ date: this.today, weight: w });
+      this.db.weightHistory = hist.sort((a,b) => a.date.localeCompare(b.date));
+      this.weightInput = '';
+      this.save();
+    },
+
+    recentWeights() {
+      return [...this.db.weightHistory].sort((a,b) => b.date.localeCompare(a.date)).slice(0, 8);
+    },
+
+    weightDelta(i) {
+      const list = this.recentWeights();
+      if (i+1 >= list.length) return null;
+      return +(list[i].weight - list[i+1].weight).toFixed(1);
+    },
+
+    last7Days() {
+      const days = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const ds = this.localDate(d);
+        const entry = this.db.days[ds];
+        const cal = entry ? entry.log.reduce((s,x) => s + x.cal, 0) : 0;
+        days.push({ date: ds, label: d.toLocaleDateString('en-US', { weekday:'short' })[0], cal });
+      }
+      const maxVal = Math.max(this.goals.cal, ...days.map(d => d.cal)) * 1.08;
+      days.forEach(d => d.pct = maxVal > 0 ? (d.cal / maxVal) * 100 : 0);
+      return days;
+    },
+
+    goalLinePct() {
+      const days = this.last7Days();
+      const maxVal = Math.max(this.goals.cal, ...days.map(d=>d.cal)) * 1.08;
+      return maxVal > 0 ? (this.goals.cal / maxVal) * 100 : 0;
+    },
+
+    streak() {
+      let count = 0;
+      for (let i = 0; i < 60; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const ds = this.localDate(d);
+        const entry = this.db.days[ds];
+        if (!entry || entry.log.length === 0) break;
+        const cal = entry.log.reduce((s,x) => s + x.cal, 0);
+        if (cal >= this.goals.cal * 0.85) count++;
+        else break;
+      }
+      return count;
+    },
+
+    applyPreset(name) {
+      const presets = {
+        preseason: { cal:3330, p:200, c:395, f:105, water:128 },
+        inseason: { cal:4000, p:210, c:490, f:128, water:128 },
+        nto: { cal:2752, p:160, c:375, f:68, water:128 },
+      };
+      this.db.goals = { ...presets[name] };
+      this.goalDraft = { ...this.db.goals };
+      this.save();
+    },
+
+    saveGoals() {
+      this.db.goals = { ...this.goalDraft };
+      this.save();
+      this.view = 'today';
+    },
+
+    resetData() {
+      if (!confirm('This clears all logged days, weights, and goals. Continue?')) return;
+      localStorage.removeItem('lanes_tracker_v1');
+      this.db = { days: {}, weightHistory: [], goals: { cal:4000, p:210, c:490, f:128, water:128 } };
+      this.ensureDay(this.today);
+      this.goalDraft = { ...this.db.goals };
+      this.save();
+    },
+
+    save() { localStorage.setItem('lanes_tracker_v1', JSON.stringify(this.db)); },
+
+    startScanning() {
+      this.scanning = true;
+      this.scanner = new Html5Qrcode('reader');
+      const config = { fps: 20, qrbox: { width: 280, height: 150 }, aspectRatio: 1.77 };
+      this.scanner.start({ facingMode: 'environment' }, config, async (code) => {
+        this.scanner.stop();
+        this.scanning = false;
+        this.fetchApi(code);
+      }).catch(() => { this.scanning = false; });
+    },
+
+    async fetchApi(code) {
+      try {
+        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`);
+        const data = await res.json();
+        if (data.status === 1) {
+          const p = data.product, n = p.nutriments;
+          this.openQuantity({
+            name: p.product_name || 'Scanned item',
+            note: 'Per 100g, from barcode scan',
+            cal: n['energy-kcal_100g'] || 0, p: n.proteins_100g || 0, c: n.carbohydrates_100g || 0, f: n.fat_100g || 0,
+            tag: 'other'
+          });
+        } else {
+          alert('Product not found.');
         }
-    </script>
+      } catch (e) { alert('Could not reach the food database.'); }
+    }
+  }
+}
+</script>
 </body>
 </html>
