@@ -164,7 +164,15 @@
       </button>
     </div>
 
-    <div id="reader" class="rounded-2xl overflow-hidden mb-4 bg-black" x-show="scanning"></div>
+    <div id="reader" class="rounded-2xl overflow-hidden mb-2 bg-black" x-show="scanning"></div>
+    <template x-if="scanError">
+      <div class="mb-4 p-3 rounded-2xl text-[12px]" style="background:#FDECEA; color:#C9463B;" x-text="scanError"></div>
+    </template>
+    <div class="flex gap-2 mb-4">
+      <input type="text" inputmode="numeric" x-model="manualBarcode" placeholder="Or type a barcode number"
+        class="flex-1 rounded-2xl py-2.5 px-4 outline-none text-sm" style="background:var(--card); border:1px solid var(--line);">
+      <button @click="fetchApi(manualBarcode)" class="px-4 rounded-2xl text-sm font-semibold" style="background:var(--card); border:1px solid var(--line); color:var(--ink);">Look up</button>
+    </div>
 
     <div class="space-y-2.5">
       <template x-for="food in filteredLibrary()" :key="food.name">
@@ -360,6 +368,8 @@ function lanesApp() {
     search: '',
     activeTag: 'all',
     scanning: false,
+    scanError: '',
+    manualBarcode: '',
     showModal: false,
     modalQty: 1,
     activeFood: {},
@@ -601,17 +611,32 @@ function lanesApp() {
     save() { localStorage.setItem('lanes_tracker_v1', JSON.stringify(this.db)); },
 
     startScanning() {
+      this.scanError = '';
       this.scanning = true;
-      this.scanner = new Html5Qrcode('reader');
-      const config = { fps: 20, qrbox: { width: 280, height: 150 }, aspectRatio: 1.77 };
-      this.scanner.start({ facingMode: 'environment' }, config, async (code) => {
-        this.scanner.stop();
-        this.scanning = false;
-        this.fetchApi(code);
-      }).catch(() => { this.scanning = false; });
+      // Wait for Alpine to actually render the #reader div before attaching the camera to it —
+      // attaching to a still-hidden, zero-size element fails silently.
+      this.$nextTick(() => {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          this.scanError = 'Camera access needs a real browser tab over https:// (or localhost). It won\u2019t work from a file preview or a plain file:// page — try the manual entry below, or open this page from a hosted link.';
+          this.scanning = false;
+          return;
+        }
+        this.scanner = new Html5Qrcode('reader');
+        const config = { fps: 20, qrbox: { width: 280, height: 150 }, aspectRatio: 1.77 };
+        this.scanner.start({ facingMode: 'environment' }, config, async (code) => {
+          this.scanner.stop();
+          this.scanning = false;
+          this.fetchApi(code);
+        }).catch((err) => {
+          this.scanning = false;
+          this.scanError = 'Could not access the camera (' + (err && err.name ? err.name : 'permission denied') + '). Use the manual barcode field below instead.';
+        });
+      });
     },
 
     async fetchApi(code) {
+      if (!code) return;
+      this.scanError = '';
       try {
         const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`);
         const data = await res.json();
@@ -619,14 +644,15 @@ function lanesApp() {
           const p = data.product, n = p.nutriments;
           this.openQuantity({
             name: p.product_name || 'Scanned item',
-            note: 'Per 100g, from barcode scan',
+            note: 'Per 100g, from barcode lookup',
             cal: n['energy-kcal_100g'] || 0, p: n.proteins_100g || 0, c: n.carbohydrates_100g || 0, f: n.fat_100g || 0,
             tag: 'other'
           });
+          this.manualBarcode = '';
         } else {
-          alert('Product not found.');
+          this.scanError = 'No product found for that barcode.';
         }
-      } catch (e) { alert('Could not reach the food database.'); }
+      } catch (e) { this.scanError = 'Could not reach the food database — check your connection.'; }
     }
   }
 }
